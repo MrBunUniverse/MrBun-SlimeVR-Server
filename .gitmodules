@@ -1,7 +1,6 @@
-[submodule "solarxr-protocol"]
-	path = solarxr-protocol
-	url = https://github.com/MrBunUniverse/SJ-SolarXR-Protocol.git
-	branch = sj-custom
 [submodule "svr-bindings-provider/openvr"]
 	path = bindings-provider/openvr
 	url = https://github.com/ValveSoftware/openvr.git
+[submodule "solarxr-protocol/lib/flatbuffers"]
+	path = solarxr-protocol/lib/flatbuffers
+	url = https://github.com/google/flatbuffers
