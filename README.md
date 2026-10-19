@@ -1,8 +1,8 @@
 # MrBun SlimeVR Server
 
-A personal fork of the [SlimeVR server](https://github.com/SlimeVR/SlimeVR-Server) for full-body tracking. It has a redesigned desktop app, some tracker reliability changes, and tools for using a Meta Quest with VRChat.
+A macOS-focused SlimeVR server with a redesigned desktop app and Quest/VRChat OSC tools.
 
-**This is an early work in progress.** Things are unfinished and change often. It is only tested on macOS. It is not an official SlimeVR release and is not affiliated with the SlimeVR team.
+**Early work in progress.** Things change often, and it is only tested on macOS.
 
 ## What's in the repo
 
@@ -13,15 +13,6 @@ A personal fork of the [SlimeVR server](https://github.com/SlimeVR/SlimeVR-Serve
 | `solarxr-protocol/` | The message format between the server and the app. A submodule, from [SJ-SolarXR-Protocol](https://github.com/MrBunUniverse/SJ-SolarXR-Protocol). |
 | `bindings-provider/` | OpenVR bindings. |
 | `docs/` | Notes and guides. Start at [`docs/README.md`](docs/README.md). |
-
-## What's different from upstream
-
-- A new desktop interface.
-- Tracker reconnect handling and drift compensation.
-- Meta Quest and VRChat OSC tools.
-- More tests.
-
-Still missing: Windows and Linux testing, installers, and more polish. See the [changelog](CHANGELOG.md) for details.
 
 ## Setup
 
