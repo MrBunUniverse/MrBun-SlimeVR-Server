@@ -1,0 +1,8 @@
+* text=auto
+
+*.png binary
+*.webp binary
+*.gif binary
+
+# Translation files are data, not source code; keep them out of the language bar
+gui/public/i18n/** linguist-documentation

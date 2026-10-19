@@ -1,0 +1,232 @@
+import { createContext, useContext, useState } from 'react';
+import { error } from '@/utils/logging';
+import { useDebouncedEffect } from './timeout';
+import { waitUntil } from '@/utils/a11y';
+import { v4 as uuidv4 } from 'uuid';
+import { useElectron } from './electron';
+import { CrossStorage } from 'electron/preload/interface';
+
+export interface WindowConfig {
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+}
+
+export enum AssignMode {
+  LowerBody = 'lower-body',
+  Core = 'core',
+  EnhancedCore = 'enhanced-core',
+  FullBody = 'full-body',
+  All = 'all',
+}
+
+export interface DeveloperModeConfig {
+  highContrast: boolean;
+  preciseRotation: boolean;
+  fastDataFeed: boolean;
+  filterSlimesAndHMD: boolean;
+  sortByName: boolean;
+  rawSlimeRotation: boolean;
+  moreInfo: boolean;
+}
+
+export const defaultDevSettings: DeveloperModeConfig = {
+  highContrast: false,
+  preciseRotation: false,
+  fastDataFeed: false,
+  filterSlimesAndHMD: false,
+  sortByName: false,
+  rawSlimeRotation: false,
+  moreInfo: false,
+};
+
+export interface Config {
+  uuid: string;
+  debug: boolean;
+  lang: string;
+  doneOnboarding: boolean;
+  watchNewDevices: boolean;
+  devSettings: DeveloperModeConfig;
+  feedbackSound: boolean;
+  feedbackSoundVolume: number;
+  connectedTrackersWarning: boolean;
+  theme: string;
+  textSize: number;
+  animations: boolean;
+  pawEars: boolean;
+  fonts: string[];
+  useTray: boolean | null;
+  mirrorView: boolean;
+  assignMode: AssignMode | null;
+  discordPresence: boolean;
+  errorTracking: boolean | null;
+  vrcMutedWarnings: string[];
+  bvhDirectory: string | null;
+  homeLayout: 'default' | 'table';
+  skeletonPreview: boolean;
+  lastUsedProportions: 'manual' | 'autobone' | 'scaled' | null;
+  dontShowUdevModal: boolean;
+}
+
+export interface ConfigContext {
+  config: Config | null;
+  setConfig: (config: Partial<Config>) => Promise<void>;
+  saveConfig: () => Promise<void>;
+}
+
+// PawPad special themes. They share Bun's layout and pixel look; each has its own palette in index.scss.
+export const PAW_THEMES = ['bun', 'fox', 'dog'];
+export const isPawTheme = (theme?: string) =>
+  theme !== undefined && PAW_THEMES.includes(theme);
+
+export const defaultConfig: Config = {
+  uuid: uuidv4(),
+  lang: 'en',
+  debug: false,
+  doneOnboarding: false,
+  watchNewDevices: true,
+  feedbackSound: true,
+  feedbackSoundVolume: 0.5,
+  connectedTrackersWarning: true,
+  theme: 'claude',
+  textSize: 12,
+  animations: true,
+  pawEars: true,
+  fonts: [
+    '-apple-system',
+    'BlinkMacSystemFont',
+    'SF Pro Text',
+    'SF Pro Display',
+    'SF Pro',
+    'sans-serif',
+  ],
+  useTray: null,
+  mirrorView: true,
+  assignMode: null,
+  discordPresence: false,
+  errorTracking: null,
+  vrcMutedWarnings: [],
+  devSettings: defaultDevSettings,
+  bvhDirectory: null,
+  homeLayout: 'default',
+  skeletonPreview: true,
+  lastUsedProportions: null,
+  dontShowUdevModal: false,
+};
+
+const localStore: CrossStorage = {
+  get: async <T>(key: string) => (localStorage.getItem(key) as T) ?? undefined,
+  set: async (key, value) => localStorage.setItem(key, value as string),
+  save: async () => true,
+  delete: async (key: string) => {
+    localStorage.removeItem(key);
+    return true;
+  },
+};
+
+const store: CrossStorage = window.electronAPI
+  ? await window.electronAPI.getStorage('settings')
+  : localStore;
+
+function fallbackToDefaults(loadedConfig: any): Config {
+  return Object.assign({}, defaultConfig, loadedConfig);
+}
+
+// Move the load of the config ouside of react
+// allows to load everything before the first render
+export const loadConfig = async () => {
+  try {
+    const json = (await store.get<string>('config.json')) ?? '{}';
+    const loadedConfig = fallbackToDefaults(JSON.parse(json));
+
+    if (!loadedConfig.uuid) {
+      // Make sure the config always has a uuid
+      loadedConfig.uuid = uuidv4();
+      await store.set('config.json', JSON.stringify(loadedConfig));
+    }
+
+    return loadedConfig;
+  } catch (e) {
+    error(e);
+    return null;
+  }
+};
+
+export function useConfigProvider(initialConfig: Config | null): ConfigContext {
+  const [currConfig, set] = useState<Config | null>(
+    initialConfig || (defaultConfig as Config)
+  );
+  const electron = useElectron();
+
+  useDebouncedEffect(
+    () => {
+      if (!currConfig) return;
+
+      store.set('config.json', JSON.stringify(currConfig));
+    },
+    [currConfig],
+    100
+  );
+
+  const setConfig = async (config: Partial<Config>) => {
+    set((curr) =>
+      config
+        ? ({
+            ...curr,
+            ...config,
+          } as Config)
+        : null
+    );
+    if (electron.isElectron) {
+      await waitUntil(
+        async () => {
+          const newConfig: Partial<Config> = JSON.parse(
+            (await store.get('config.json')) ?? '{}'
+          );
+          return Object.entries(config).every(([key, value]) =>
+            typeof value === 'object'
+              ? JSON.stringify(newConfig[key as keyof Config]) === JSON.stringify(value)
+              : newConfig[key as keyof Config] === value
+          );
+        },
+        100,
+        10
+      );
+    } else {
+      await waitUntil(
+        () => {
+          const newConfig: Partial<Config> = JSON.parse(
+            localStorage.getItem('config.json') ?? '{}'
+          );
+          return Object.entries(config).every(([key, value]) =>
+            typeof value === 'object'
+              ? JSON.stringify(newConfig[key as keyof Config]) === JSON.stringify(value)
+              : newConfig[key as keyof Config] === value
+          );
+        },
+        100,
+        10
+      );
+    }
+  };
+
+  return {
+    config: currConfig,
+    setConfig,
+    saveConfig: async () => {
+      if (!electron.isElectron) return;
+      await store.save();
+    },
+  };
+}
+
+export const ConfigContextC = createContext<ConfigContext>(undefined as never);
+
+export function useConfig() {
+  const context = useContext<ConfigContext>(ConfigContextC);
+  if (!context) {
+    throw new Error('useConfig must be within a ConfigContext Provider');
+  }
+  return context;
+}

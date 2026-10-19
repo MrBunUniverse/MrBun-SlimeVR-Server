@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "SlimeVR Spike",
+  "version": "0.0.0",
+  "identifier": "dev.slimevr.tauri-spike",
+  "build": {
+    "frontendDist": "../latest/gui/out/renderer"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self' data: ws://localhost:21110 ws://127.0.0.1:21110 http://127.0.0.1:6970 https://api.github.com https://github.com https://objects.githubusercontent.com https://*.sentry.io"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg"],
+    "icon": ["icons/icon.icns", "icons/icon.png"]
+  }
+}

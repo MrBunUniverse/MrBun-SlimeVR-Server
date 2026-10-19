@@ -1,0 +1,55 @@
+# Operating-system metadata
+.DS_Store
+*.DS_Store
+.stignore
+
+# IDE and editor state
+.idea/
+.fleet/
+.project
+.classpath
+.settings/
+/.vscode/settings.json
+/.vscode/launch.json
+
+# Java, Kotlin, Gradle, and Android local state
+/.gradle/
+/.kotlin/
+/build/
+local.properties
+
+# JavaScript dependencies and package-manager caches
+/node_modules/
+/.pnpm-store/
+
+# Generated GUI output
+/gui/out/
+/gui/stats.html
+
+# Native tooling caches
+/.cache/
+
+# Nix and direnv local state
+/.direnv/
+/.devenv
+/.bin/
+
+# Runtime and temporary configuration
+vrconfig.yml.tmp
+
+# Local recovery data and generated analysis
+/.backup/
+*.bak
+/.tools/
+/graphify-out/
+/.context-shears/
+
+# Claude Code local overrides
+/.claude/settings.local.json
+
+# Local-only tool and backup files
+CLAUDE.md
+AGENTS.md
+.agents/
+.claude/
+firmware_backups/

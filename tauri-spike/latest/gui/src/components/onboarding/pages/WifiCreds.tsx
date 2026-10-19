@@ -1,0 +1,106 @@
+import { Localized } from '@fluent/react';
+import { useOnboarding } from '@/hooks/onboarding';
+import { useWifiForm } from '@/hooks/wifi-form';
+import { Button } from '@/components/commons/Button';
+import { Input } from '@/components/commons/Input';
+import { Typography } from '@/components/commons/Typography';
+import classNames from 'classnames';
+import { WifiIcon } from '@/components/commons/icon/WifiIcon';
+import { DongleSectionContent } from './Dongle';
+
+export function WifiCredsPage() {
+  const { applyProgress, state } = useOnboarding();
+  const { control, handleSubmit, submitWifiCreds, formState } = useWifiForm();
+
+  applyProgress(0.2);
+
+  return (
+    <div className="flex flex-col w-full h-full xs:justify-center items-center">
+      <div
+        className={classNames('grid gap-4 max-w-6xl p-4', {
+          'xs:grid-cols-2': state.alonePage,
+        })}
+      >
+        {state.alonePage && <DongleSectionContent />}
+        <form
+          className="flex flex-col gap-2"
+          onSubmit={handleSubmit(submitWifiCreds)}
+        >
+          <div className="flex gap-3 items-center">
+            <div className="bg-accent-background-20/12 border border-accent-background-20/25 rounded-full p-2.5 text-accent-background-10 fill-accent-background-20 shadow-xs">
+              <WifiIcon variant="navbar" value={1} size={22} />
+            </div>
+            <Typography
+              variant="main-title"
+              id="onboarding-wifi_creds-v2"
+              className="font-serif tracking-tight"
+            />
+          </div>
+
+          <div className="flex flex-col gap-3 w-full h-full p-1">
+            <Typography
+              id="onboarding-wifi_creds-description-v2"
+              whitespace="whitespace-pre-wrap"
+              className="text-ui-2xs text-background-30"
+            />
+            <div className="flex flex-col gap-3.5 p-6 rounded-[20px] bg-background-60/40 dark:bg-background-10/[0.03] border border-background-50/50 dark:border-background-10/[0.06] backdrop-blur-sm shadow-md sentry-mask">
+              <Localized
+                id="onboarding-wifi_creds-ssid"
+                attrs={{ placeholder: true, label: true }}
+              >
+                <Input
+                  control={control}
+                  rules={{ required: true }}
+                  name="ssid"
+                  type="text"
+                  label="SSID"
+                  placeholder="ssid"
+                  variant="secondary"
+                />
+              </Localized>
+              <Localized
+                id="onboarding-wifi_creds-password"
+                attrs={{ placeholder: true, label: true }}
+              >
+                <Input
+                  control={control}
+                  rules={{
+                    validate: {
+                      validPassword: (v: string | undefined) =>
+                        v === undefined ||
+                        v.length === 0 ||
+                        new Blob([v]).size >= 8,
+                    },
+                  }}
+                  name="password"
+                  type="password"
+                  label="Password"
+                  placeholder="password"
+                  variant="secondary"
+                />
+              </Localized>
+              <div className="flex flex-row gap-3 justify-between">
+                {!state.alonePage ? (
+                  <Button
+                    variant="secondary"
+                    state={{ alonePage: state.alonePage }}
+                    to={'/onboarding/quiz/slime-set'}
+                    id="onboarding-wifi_creds-back-v2"
+                  />
+                ) : (
+                  <div />
+                )}
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={!formState.isValid}
+                  id="onboarding-wifi_creds-submit"
+                />
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

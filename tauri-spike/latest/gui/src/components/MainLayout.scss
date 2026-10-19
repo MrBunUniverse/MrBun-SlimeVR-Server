@@ -1,0 +1,68 @@
+:root {
+  --navbar-w: 0px;
+  --sidebar-actual-w: 0px;
+}
+
+.main-layout {
+  display: grid;
+  position: relative;
+  /* The top bar wraps to a second line in narrow windows, so its row grows with it. */
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) var(--sidebar-actual-w, 0px);
+  grid-template-areas:
+    't t'
+    'c s';
+  transition: grid-template-columns 400ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  &.full {
+    --sidebar-actual-w: 0px;
+  }
+
+  &.is-resizing {
+    transition: none !important;
+    user-select: none !important;
+    cursor: col-resize !important;
+  }
+
+  @screen nsm {
+    --right-section-w: 40%;
+  }
+
+  @screen sm {
+    --right-section-w: 36%;
+  }
+
+  @screen md {
+    --right-section-w: 30%;
+  }
+
+  @screen lg {
+    --right-section-w: 25%;
+  }
+
+  @screen xl {
+    --right-section-w: 22%;
+  }
+
+  @screen mobile {
+    --checklist-h: 30px;
+
+    &.checklist-ok {
+      --checklist-h: 0px;
+    }
+
+    &.full {
+      grid-template:
+        't' auto
+        'l' var(--checklist-h)
+        'b' var(--toolbar-h)
+        'c' minmax(0, 1fr)
+        / 100%;
+    }
+
+    grid-template:
+      't' auto
+      'c' minmax(0, 1fr)
+      / 100%;
+  }
+}

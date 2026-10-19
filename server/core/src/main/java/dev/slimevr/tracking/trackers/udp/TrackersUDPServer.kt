@@ -1,0 +1,697 @@
+package dev.slimevr.tracking.trackers.udp
+
+import com.jme3.math.FastMath
+import dev.slimevr.NetworkProtocol
+import dev.slimevr.VRServer
+import dev.slimevr.config.config
+import dev.slimevr.protocol.rpc.MAG_TIMEOUT
+import dev.slimevr.tracking.trackers.*
+import io.eiren.util.Util
+import io.eiren.util.logging.LogManager
+import io.github.axisangles.ktmath.Quaternion
+import io.github.axisangles.ktmath.Quaternion.Companion.fromRotationVector
+import kotlinx.coroutines.*
+import solarxr_protocol.rpc.ResetType
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetSocketAddress
+import java.net.NetworkInterface
+import java.net.SocketAddress
+import java.net.SocketTimeoutException
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.function.Consumer
+import kotlin.coroutines.resume
+
+/**
+ * Receives trackers data by UDP using extended owoTrack protocol.
+ */
+class TrackersUDPServer(private val port: Int, name: String, private val trackersConsumer: Consumer<Tracker>) : Thread(name) {
+	private val random = Random()
+	private val connectionRegistry = UDPConnectionRegistry()
+
+	@Volatile
+	private var broadcastAddresses: List<InetSocketAddress> = emptyList()
+
+	@Volatile
+	private var lastBroadcastAddressRefresh = 0L
+	private val parser = UDPProtocolParser()
+
+	// 1500 is a common network MTU. 1472 is the maximum size of a UDP packet (1500 - 20 for IPv4 header - 8 for UDP header)
+	private val rcvBuffer = ByteArray(1500 - 20 - 8)
+	private val bb = ByteBuffer.wrap(rcvBuffer).order(ByteOrder.BIG_ENDIAN)
+
+	// Gets initialized in this.run()
+	private lateinit var socket: DatagramSocket
+	private var lastKeepup = System.currentTimeMillis()
+
+	private fun protocolFor(handshake: UDPPacket3Handshake): NetworkProtocol = if (handshake.firmware?.isEmpty() == true) {
+		// Only old owoTrack doesn't report firmware and has different packet IDs with SlimeVR.
+		NetworkProtocol.OWO_LEGACY
+	} else {
+		NetworkProtocol.SLIMEVR_RAW
+	}
+
+	@Synchronized
+	private fun refreshBroadcastAddressesIfNeeded(now: Long = System.currentTimeMillis()) {
+		if (now - lastBroadcastAddressRefresh < 30_000L) return
+		broadcastAddresses = try {
+			NetworkInterface.getNetworkInterfaces().asSequence().filter {
+				// Ignore loopback, PPP, virtual and disabled interfaces
+				!it.isLoopback && it.isUp && !it.isPointToPoint && !it.isVirtual
+			}.flatMap { it.interfaceAddresses.asSequence() }.map {
+				// This ignores IPv6 addresses
+				it.broadcast
+			}.filter { it != null && it.isSiteLocalAddress }.map { InetSocketAddress(it, port) }.toList()
+		} catch (e: Exception) {
+			LogManager.severe("[TrackerServer] Can't enumerate network interfaces", e)
+			emptyList()
+		}
+		lastBroadcastAddressRefresh = now
+	}
+
+	private fun setUpNewConnection(handshakePacket: DatagramPacket, handshake: UDPPacket3Handshake) {
+		LogManager.info("[TrackerServer] Handshake received from ${handshakePacket.address}:${handshakePacket.port}")
+		val addr = handshakePacket.address
+		val socketAddr = handshakePacket.socketAddress
+
+		// Check if it's a known device
+		VRServer.instance.configManager.vrConfig.let { vrConfig ->
+			if (vrConfig.isKnownDevice(handshake.macString)) return@let
+			val mac = handshake.macString ?: return@let
+
+			VRServer.instance.handshakeHandler.sendUnknownHandshake(mac)
+			return
+		}
+
+		// Reuse a known MAC identity, including a device disconnected by Forget.
+		val existingConnection = connectionRegistry.findForHandshake(handshake.macString, socketAddr)
+		val connection = existingConnection ?: run {
+			val newConnection = UDPDevice(
+				socketAddr,
+				addr,
+				handshake.macString ?: addr.hostAddress,
+				handshake.boardType,
+				handshake.mcuType,
+			)
+			newConnection.protocolVersion = handshake.protocolVersion
+			newConnection.protocol = protocolFor(handshake)
+			newConnection.name = handshake.macString?.let { "udp://$it" } ?: "udp:/$addr"
+			// Fixing the slash would break existing config names.
+			newConnection.descriptiveName = "udp:/$addr"
+			newConnection.firmwareVersion = handshake.firmware
+			VRServer.instance.deviceManager.addDevice(newConnection)
+			newConnection
+		}
+
+		connection.ipAddress = addr
+		connection.name = handshake.macString?.let { "udp://$it" } ?: "udp:/$addr"
+		connection.descriptiveName = "udp:/$addr"
+		connection.protocolVersion = handshake.protocolVersion
+		connection.protocol = protocolFor(handshake)
+		connection.firmwareVersion = handshake.firmware
+		connection.lastPacketNumber = 0
+		connection.lastPacket = System.currentTimeMillis()
+		connection.timedOut = false
+		val displacedConnection = connectionRegistry.activate(connection, socketAddr, handshake.macString)
+		displacedConnection?.trackers?.forEach { (_, tracker) -> tracker.status = TrackerStatus.DISCONNECTED }
+		if (existingConnection == null) {
+			val index = connectionRegistry.activeSnapshot().indexOf(connection)
+			LogManager.info("[TrackerServer] Tracker $index connected from address $socketAddr. Board type: ${handshake.boardType}, firmware name: ${handshake.firmware}, protocol version: ${connection.protocolVersion}, mac: ${handshake.macString}, name: ${connection.name}")
+			if (connection.protocol == NetworkProtocol.OWO_LEGACY || connection.protocolVersion < 9) {
+				setUpSensor(
+					connection,
+					0,
+					handshake.imuType,
+					1,
+					MagnetometerStatus.NOT_SUPPORTED,
+					null,
+					TrackerDataType.ROTATION,
+					null,
+				)
+			}
+		} else {
+			LogManager.info("[TrackerServer] Tracker reconnected from address $socketAddr (device index ${connectionRegistry.activeSnapshot().indexOf(connection)}), protocol version ${connection.protocolVersion}, MAC ${handshake.macString}")
+		}
+		connection.firmwareFeatures = FirmwareFeatures()
+		bb.limit(bb.capacity())
+		bb.rewind()
+		parser.writeHandshakeResponse(bb, connection)
+		socket.send(DatagramPacket(rcvBuffer, bb.position(), connection.address))
+	}
+
+	private val mainScope = CoroutineScope(SupervisorJob())
+	private fun setUpSensor(
+		connection: UDPDevice,
+		trackerId: Int,
+		sensorType: IMUType,
+		sensorStatus: Int,
+		magStatus: MagnetometerStatus,
+		trackerPosition: TrackerPosition?,
+		trackerDataType: TrackerDataType,
+		hasCompletedRestCalibration: Boolean?,
+	) {
+		LogManager.info("[TrackerServer] Sensor $trackerId for ${connection.name} status: $sensorStatus")
+		var imuTracker = connection.getTracker(trackerId)
+		if (imuTracker == null) {
+			var formattedHWID = connection.hardwareIdentifier.replace(":", "").takeLast(5)
+			if (trackerId != 0) {
+				formattedHWID += " Extension"
+				if (trackerId > 1) {
+					formattedHWID += " $trackerId"
+				}
+			}
+
+			imuTracker = Tracker(
+				connection,
+				VRServer.getNextLocalTrackerId(),
+				connection.name + "/" + trackerId,
+				"Tracker $formattedHWID",
+				trackerPosition,
+				trackerNum = trackerId,
+				hasRotation = true,
+				hasAcceleration = true,
+				userEditable = true,
+				imuType = if (trackerDataType == TrackerDataType.ROTATION) sensorType else null,
+				allowFiltering = true,
+				allowReset = true,
+				allowMounting = true,
+				usesTimeout = true,
+				magStatus = magStatus,
+				trackerDataType = trackerDataType,
+			)
+			connection.trackers[trackerId] = imuTracker
+			trackersConsumer.accept(imuTracker)
+			LogManager.info("[TrackerServer] Added sensor $trackerId for ${connection.name}, ImuType $sensorType, DataType $trackerDataType, default TrackerPosition $trackerPosition")
+		}
+		val status = UDPPacket15SensorInfo.getStatus(sensorStatus)
+		if (status != null) imuTracker.status = status
+
+		imuTracker.hasCompletedRestCalibration = hasCompletedRestCalibration
+
+		if (magStatus == MagnetometerStatus.NOT_SUPPORTED) return
+		if (magStatus == MagnetometerStatus.ENABLED &&
+			(!VRServer.instance.configManager.vrConfig.server.useMagnetometerOnAllTrackers || imuTracker.config.shouldHaveMagEnabled == false)
+		) {
+			mainScope.launch {
+				withTimeoutOrNull(MAG_TIMEOUT) {
+					connection.setMag(MagnetometerStatus.DISABLED, trackerId)
+				}
+			}
+		} else if (magStatus == MagnetometerStatus.DISABLED &&
+			VRServer.instance.configManager.vrConfig.server.useMagnetometerOnAllTrackers &&
+			imuTracker.config.shouldHaveMagEnabled == true
+		) {
+			mainScope.launch {
+				withTimeoutOrNull(MAG_TIMEOUT) {
+					connection.setMag(MagnetometerStatus.ENABLED, trackerId)
+				}
+			}
+		}
+	}
+
+	private data class ConfigStateWaiter(
+		val expectedState: Boolean,
+		val channel: CancellableContinuation<Boolean>,
+		var ran: Boolean = false,
+	)
+
+	private val queues: MutableMap<Triple<SocketAddress, ConfigTypeId, Int>, Deque<ConfigStateWaiter>> = ConcurrentHashMap()
+	suspend fun setConfigFlag(device: UDPDevice, configTypeId: ConfigTypeId, state: Boolean, sensorId: Int = 255) {
+		if (device.timedOut) return
+		val triple = Triple(device.address, configTypeId, sensorId)
+		val queue = queues.computeIfAbsent(triple) { _ -> ConcurrentLinkedDeque() }
+
+		suspendCancellableCoroutine {
+			val waiter = ConfigStateWaiter(state, it)
+			queue.add(waiter)
+			it.invokeOnCancellation {
+				queue.remove(waiter)
+			}
+		}
+	}
+
+	private fun actualSetConfigFlag(device: UDPDevice, configTypeId: ConfigTypeId, state: Boolean, sensorId: Int) {
+		val packet = UDPPacket25SetConfigFlag(sensorId, configTypeId, state)
+		bb.limit(bb.capacity())
+		bb.rewind()
+		parser.write(bb, null, packet)
+		socket.send(DatagramPacket(rcvBuffer, bb.position(), device.address))
+	}
+
+	fun refreshTrackers() {
+		LogManager.info("[TrackerServer] Manual refresh of trackers initiated")
+		// 1. Broadcast discovery heartbeat on all active network interfaces
+		if (::socket.isInitialized && !socket.isClosed) {
+			refreshBroadcastAddressesIfNeeded()
+			for (addr in broadcastAddresses) {
+				try {
+					bb.limit(bb.capacity())
+					bb.rewind()
+					parser.write(bb, null, UDPPacket0Heartbeat)
+					socket.send(DatagramPacket(rcvBuffer, bb.position(), addr))
+				} catch (ignored: Exception) {
+				}
+			}
+
+			// 2. Ping all known connections with error isolation
+			connectionRegistry.withActiveConnections { activeConnections ->
+				for (conn in activeConnections) {
+					try {
+						bb.limit(bb.capacity())
+						bb.rewind()
+						parser.write(bb, conn, UDPPacket1Heartbeat)
+						socket.send(DatagramPacket(rcvBuffer, bb.position(), conn.address))
+					} catch (e: Exception) {
+						LogManager.warning("[TrackerServer] Refresh ping failed for ${conn.name} (${conn.address}): ${e.message}")
+					}
+				}
+			}
+		}
+
+		// 3. Reconcile skeleton model safely without resetting calibration/proportions
+		VRServer.instance.updateSkeletonModel()
+	}
+
+	override fun run() {
+		val serialBuffer2 = StringBuilder()
+		while (!isInterrupted) {
+			try {
+				socket = DatagramSocket(port)
+				var prevPacketTime = System.currentTimeMillis()
+				socket.soTimeout = 250
+				while (!isInterrupted) {
+					var received: DatagramPacket? = null
+					try {
+						// Keep discovery alive while other trackers are connected. A tracker
+						// powered on later must be able to rejoin without a manual refresh.
+						val discoveryPacketTime = System.currentTimeMillis()
+						if (discoveryPacketTime - prevPacketTime >= 2000) {
+							refreshBroadcastAddressesIfNeeded(discoveryPacketTime)
+							for (addr in broadcastAddresses) {
+								try {
+									bb.limit(bb.capacity())
+									bb.rewind()
+									parser.write(bb, null, UDPPacket0Heartbeat)
+									socket.send(DatagramPacket(rcvBuffer, bb.position(), addr))
+								} catch (ignored: Exception) {
+								}
+							}
+							prevPacketTime = discoveryPacketTime
+						}
+						received = DatagramPacket(rcvBuffer, rcvBuffer.size)
+						socket.receive(received)
+						val arrivalTimeNanos = System.nanoTime()
+						bb.limit(received.length)
+						bb.rewind()
+						val connection = connectionRegistry.findByAddress(received.socketAddress)
+						parser.parse(bb, connection)
+							.filterNotNull()
+							.forEach { processPacket(received, it, connection, arrivalTimeNanos) }
+
+						queues.forEach { (t, p) ->
+							val q = p.firstOrNull() ?: return@forEach
+							if (q.ran) return@forEach
+
+							val device = connectionRegistry.findByAddress(t.first) ?: run {
+								p.removeFirst()
+								LogManager.info("[TrackerServer] Device ${t.first} not connected, so can't communicate with it")
+								return@forEach
+							}
+							try {
+								actualSetConfigFlag(device, t.second, q.expectedState, t.third)
+								if (!device.timedOut) q.ran = true
+							} catch (e: Exception) {
+								LogManager.warning("[TrackerServer] Failed to set config flag on ${device.name}: ${e.message}")
+							}
+						}
+					} catch (ignored: SocketTimeoutException) {
+					} catch (e: Exception) {
+						LogManager.warning(
+							"[TrackerServer] Error parsing packet ${packetToString(received)}",
+							e,
+						)
+					}
+					if (lastKeepup + 500 < System.currentTimeMillis()) {
+						lastKeepup = System.currentTimeMillis()
+						connectionRegistry.withActiveConnections { activeConnections ->
+							for (conn in activeConnections) {
+								// Guard each tracker individually so failure on one never impacts others
+								try {
+									bb.limit(bb.capacity())
+									bb.rewind()
+									parser.write(bb, conn, UDPPacket1Heartbeat)
+									socket.send(DatagramPacket(rcvBuffer, bb.position(), conn.address))
+								} catch (e: Exception) {
+									if (!conn.timedOut) {
+										conn.timedOut = true
+										LogManager.warning("[TrackerServer] Failed sending keepalive to ${conn.name} (${conn.address}): ${e.message}")
+									}
+								}
+
+								if (conn.lastPacket + 1000 < System.currentTimeMillis()) {
+									if (!conn.timedOut) {
+										conn.timedOut = true
+										LogManager.info("[TrackerServer] Tracker timed out: $conn")
+									}
+								} else {
+									conn.timedOut = false
+								}
+
+								if (conn.serialBuffer.isNotEmpty() &&
+									conn.lastSerialUpdate + 500L < System.currentTimeMillis()
+								) {
+									serialBuffer2
+										.append('[')
+										.append(conn.name)
+										.append("] ")
+										.append(conn.serialBuffer)
+									println(serialBuffer2)
+									serialBuffer2.setLength(0)
+									conn.serialBuffer.setLength(0)
+								}
+
+								if (!conn.timedOut && conn.lastPingPacketTime + 500 < System.currentTimeMillis()) {
+									try {
+										conn.lastPingPacketId = random.nextInt()
+										conn.lastPingPacketTime = System.currentTimeMillis()
+										bb.limit(bb.capacity())
+										bb.rewind()
+										bb.putInt(10)
+										bb.putLong(0)
+										bb.putInt(conn.lastPingPacketId)
+										socket.send(DatagramPacket(rcvBuffer, bb.position(), conn.address))
+									} catch (e: Exception) {
+										// Ignore ping send failure for dead/lagging tracker
+									}
+								}
+							}
+						}
+					}
+				}
+			} catch (e: Exception) {
+				LogManager.severe("[TrackerServer] Fatal socket error in UDP server supervisor loop, reinitializing in 1000ms...", e)
+				try {
+					if (::socket.isInitialized) {
+						Util.close(socket)
+					}
+				} catch (ignored: Exception) {
+				}
+				try {
+					sleep(1000)
+				} catch (ie: InterruptedException) {
+					break
+				}
+			} finally {
+				if (::socket.isInitialized) {
+					Util.close(socket)
+				}
+			}
+		}
+	}
+
+	private fun processPacket(
+		received: DatagramPacket,
+		packet: UDPPacket,
+		connection: UDPDevice?,
+		arrivalTimeNanos: Long = System.nanoTime(),
+	) {
+		when (packet) {
+			is UDPPacket0Heartbeat, is UDPPacket1Heartbeat, is UDPPacket25SetConfigFlag -> {}
+
+			is UDPPacket3Handshake -> setUpNewConnection(received, packet)
+
+			is RotationPacket -> {
+				var rot = packet.rotation
+				rot = AXES_OFFSET.times(rot)
+				val tracker = connection?.getTracker(packet.sensorId) ?: return
+				var acceleration: io.github.axisangles.ktmath.Vector3? = null
+				if (packet is UDPPacket23RotationAndAcceleration) {
+					// sensorOffset is applied correctly since protocol 22
+					// See: https://github.com/SlimeVR/SlimeVR-Tracker-ESP/pull/480
+					acceleration = if (connection.protocolVersion >= 22) {
+						packet.acceleration
+					} else {
+						SENSOR_OFFSET_CORRECTION.sandwich(packet.acceleration)
+					}
+				}
+				tracker.ingestSample(rot, acceleration, arrivalTimeNanos)
+			}
+
+			is UDPPacket17RotationData -> {
+				val tracker = connection?.getTracker(packet.sensorId) ?: return
+				var rot17 = packet.rotation
+				rot17 = AXES_OFFSET * rot17
+				when (packet.dataType) {
+					UDPPacket17RotationData.DATA_TYPE_NORMAL -> {
+						tracker.ingestSample(rot17, arrivalTimeNanos = arrivalTimeNanos)
+						// tracker.calibrationStatus = rotationData.calibrationInfo;
+						// Not implemented in server
+					}
+
+					UDPPacket17RotationData.DATA_TYPE_CORRECTION -> {
+// 						tracker.rotMagQuaternion.set(rot17);
+// 						tracker.magCalibrationStatus = rotationData.calibrationInfo;
+// 						tracker.hasNewCorrectionData = true;
+						// Not implemented in server
+					}
+				}
+			}
+
+			is UDPPacket18MagnetometerAccuracy -> {}
+
+			is UDPPacket4Acceleration -> {
+				val tracker = connection?.getTracker(packet.sensorId) ?: return
+				// sensorOffset is applied correctly since protocol 22
+				// See: https://github.com/SlimeVR/SlimeVR-Tracker-ESP/pull/480
+				if (connection.protocolVersion >= 22) {
+					tracker.setAcceleration(packet.acceleration, arrivalTimeNanos)
+				} else {
+					tracker.setAcceleration(SENSOR_OFFSET_CORRECTION.sandwich(packet.acceleration), arrivalTimeNanos)
+				}
+			}
+
+			is UDPPacket10PingPong -> {
+				if (connection == null) return
+				if (connection.lastPingPacketId == packet.pingId) {
+					for (t in connection.trackers.values) {
+						t.ping = (System.currentTimeMillis() - connection.lastPingPacketTime).toInt() / 2
+						t.heartbeat()
+					}
+				} else {
+					LogManager.debug(
+						"[TrackerServer] Wrong ping id ${packet.pingId} != ${connection.lastPingPacketId}",
+					)
+				}
+			}
+
+			is UDPPacket11Serial -> {
+				if (connection == null) return
+				println("[${connection.name}] ${packet.serial}")
+			}
+
+			is UDPPacket12BatteryLevel -> connection?.trackers?.values?.forEach {
+				it.batteryVoltage = packet.voltage
+				// Firmware does not verify the voltage level at all
+				// Instead guess if a battery is present or not
+				// Too low or high voltage should mean there is no battery or there is a measurement error
+				// Some ESP can run at 2.3V, set a limit at 2V
+				// Below this the tracker is definitely dead if everything is working properly
+				if (packet.voltage != null) {
+					if (packet.voltage!! > 2f && packet.voltage!! < 6f) {
+						// Assuming floor when converting to int
+						it.batteryLevel = if (packet.level < 0.01f) -1f else packet.level * 100
+					} else {
+						it.batteryLevel = 0f
+					}
+				} else {
+					it.batteryLevel = packet.level * 100
+				}
+				// Server displays 0% if received 255 or -1, otherwise 0 will hide battery icon
+			}
+
+			is UDPPacket13Tap -> {
+				val tracker = connection?.getTracker(packet.sensorId) ?: return
+				LogManager.info(
+					"[TrackerServer] Tap packet received from ${tracker.name}: ${packet.tap}",
+				)
+			}
+
+			is UDPPacket14Error -> {
+				LogManager.severe(
+					"[TrackerServer] Error received from ${received.socketAddress}: ${packet.errorNumber}",
+				)
+				val tracker = connection?.getTracker(packet.sensorId) ?: return
+				tracker.status = TrackerStatus.ERROR
+			}
+
+			is UDPPacket15SensorInfo -> {
+				if (connection == null) return
+				val magStatus = packet.sensorConfig?.magStatus ?: MagnetometerStatus.NOT_SUPPORTED
+				setUpSensor(
+					connection,
+					packet.sensorId,
+					packet.sensorType,
+					packet.sensorStatus,
+					magStatus,
+					packet.trackerPosition,
+					packet.trackerDataType,
+					packet.hasCompletedRestCalibration,
+				)
+				// Send ack
+				bb.limit(bb.capacity())
+				bb.rewind()
+				parser.writeSensorInfoResponse(bb, connection, packet)
+				socket.send(DatagramPacket(rcvBuffer, bb.position(), connection.address))
+				LogManager.info(
+					"[TrackerServer] Sensor info for ${connection.descriptiveName}/${packet.sensorId}: ${packet.sensorStatus}, mag $magStatus",
+				)
+			}
+
+			is UDPPacket19SignalStrength -> connection?.trackers?.values?.forEach {
+				it.signalStrength = packet.signalStrength
+			}
+
+			is UDPPacket20Temperature -> {
+				val tracker = connection?.getTracker(packet.sensorId) ?: return
+				tracker.temperature = packet.temperature
+			}
+
+			is UDPPacket21UserAction -> {
+				if (connection == null) return
+				var name = ""
+				when (packet.type) {
+					UDPPacket21UserAction.RESET_FULL -> {
+						name = "Full reset"
+						VRServer.instance.scheduleResetTrackersFull(
+							RESET_SOURCE_NAME,
+							(VRServer.instance.configManager.vrConfig.resetsConfig.fullResetDelay * 1000).toLong(),
+						)
+					}
+
+					UDPPacket21UserAction.RESET_YAW -> {
+						name = "Yaw reset"
+						VRServer.instance.scheduleResetTrackersYaw(RESET_SOURCE_NAME, (VRServer.instance.configManager.vrConfig.resetsConfig.yawResetDelay * 1000).toLong())
+					}
+
+					UDPPacket21UserAction.RESET_MOUNTING -> {
+						name = "Mounting reset"
+						VRServer
+							.instance
+							.resetHandler
+							.sendStarted(ResetType.Mounting)
+						VRServer.instance.scheduleResetTrackersMounting(RESET_SOURCE_NAME, (VRServer.instance.configManager.vrConfig.resetsConfig.mountingResetDelay * 1000).toLong())
+					}
+
+					UDPPacket21UserAction.PAUSE_TRACKING -> {
+						name = "Pause tracking toggle"
+						VRServer.instance.togglePauseTracking(RESET_SOURCE_NAME)
+					}
+				}
+
+				LogManager.info(
+					"[TrackerServer] User action from ${connection.descriptiveName} received. $name performed.",
+				)
+			}
+
+			is UDPPacket22FeatureFlags -> {
+				if (connection == null) return
+				// Respond with server flags
+				bb.limit(bb.capacity())
+				bb.rewind()
+				parser.write(bb, connection, packet)
+				socket.send(DatagramPacket(rcvBuffer, bb.position(), connection.address))
+				connection.firmwareFeatures = packet.firmwareFeatures
+			}
+
+			is UDPPacket24AckConfigChange -> {
+				if (connection == null) return
+				val queue = queues[Triple(connection.address, packet.configType, packet.sensorId)] ?: run {
+					LogManager.severe("[TrackerServer] Error, acknowledgment of config change that we don't have in our queue.")
+					return
+				}
+				val changed = queue.removeFirst()
+				changed.channel.resume(true)
+				val trackers = if (SensorSpecificPacket.isGlobal(packet.sensorId)) {
+					connection.trackers.values.toList()
+				} else {
+					listOf(connection.getTracker(packet.sensorId) ?: return)
+				}
+				LogManager.info("[TrackerServer] Acknowledged config change on ${connection.descriptiveName} (${trackers.map { it.trackerNum }.joinToString()}). Config changed on ${packet.configType}")
+			}
+
+			is UDPPacket26FlexData -> {
+				val tracker = connection?.getTracker(packet.sensorId) ?: return
+				if (tracker.trackerDataType == TrackerDataType.FLEX_RESISTANCE) {
+					tracker.trackerFlexHandler.setFlexResistance(packet.flexData)
+				} else if (tracker.trackerDataType == TrackerDataType.FLEX_ANGLE) {
+					tracker.trackerFlexHandler.setFlexAngle(packet.flexData)
+				}
+				tracker.dataTick()
+			}
+
+			is UDPPacket27Position -> {
+				val tracker = connection?.getTracker(packet.sensorId) ?: return
+				tracker.position = packet.position
+				// dont call dataTick here as this is just position update
+			}
+
+			is UDPPacket200ProtocolChange -> {}
+		}
+	}
+
+	fun getConnections(): List<UDPDevice?> = connectionRegistry.activeSnapshot()
+
+	fun getConnectionByMAC(mac: String): UDPDevice? = connectionRegistry.findByMAC(mac)
+
+	// FIXME: for some reason it ends up disconnecting after 30 seconds have passed instead of immediately
+	fun disconnectDevice(device: UDPDevice) {
+		connectionRegistry.disconnect(device)
+		device.trackers.forEach { (_, tracker) ->
+			tracker.status = TrackerStatus.DISCONNECTED
+		}
+
+		LogManager.info(
+			"[TrackerServer] Forcefully disconnected ${device.hardwareIdentifier} device.",
+		)
+	}
+
+	companion object {
+		/**
+		 * Change between IMU axes and OpenGL/SteamVR axes
+		 */
+		private val AXES_OFFSET = fromRotationVector(-FastMath.HALF_PI, 0f, 0f)
+
+		// TODO: Set this offset to Quaternion.IDENTITY when the firmware is corrected!
+		// 270 deg (-90 deg) default for officials
+		private val SENSOR_OFFSET_CORRECTION = Quaternion.rotationAroundZAxis(-FastMath.HALF_PI)
+		private const val RESET_SOURCE_NAME = "TrackerServer"
+
+		private val hexFormat = HexFormat {
+			bytes.byteSeparator = ","
+		}
+
+		private fun packetToString(packet: DatagramPacket?): String {
+			val sb = StringBuilder()
+			sb.append("DatagramPacket{")
+			if (packet == null) {
+				sb.append("null")
+			} else {
+				sb.append(packet.address.toString())
+				sb.append(':')
+				sb.append(packet.port)
+				sb.append(',')
+				sb.append(packet.length)
+				sb.append(',')
+				sb.append('{')
+				sb.append(packet.data.toHexString(0, packet.length, hexFormat))
+				sb.append('}')
+			}
+			sb.append('}')
+			return sb.toString()
+		}
+	}
+}

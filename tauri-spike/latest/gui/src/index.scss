@@ -1,0 +1,2979 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+}
+
+body {
+  font-variant-numeric: tabular-nums;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'SF Pro Text',
+    'SF Pro Display',
+    'SF Pro',
+    'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.01em;
+  background-color: theme('colors.background.80');
+
+  /*Scrollbar for firefox */
+  scrollbar-color: theme('colors.background.50') transparent;
+  scrollbar-width: thin;
+}
+
+@keyframes slime-idle-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.5px);
+  }
+}
+
+.animate-slime-idle {
+  animation: slime-idle-bounce 3.2s ease-in-out infinite;
+}
+
+@keyframes slime-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.92;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+}
+
+.animate-slime-breathe {
+  animation: slime-breathe 9s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+/* Welcome logo: stepped pixel copies trail down from the logo and fade out. */
+.welcome-logo-trail {
+  filter: drop-shadow(0 2px 0 rgba(var(--accent-background-30), 0.45))
+    drop-shadow(0 4px 0 rgba(var(--accent-background-30), 0.25))
+    drop-shadow(0 6px 0 rgba(var(--accent-background-30), 0.1));
+}
+
+@keyframes warning-breathe-glow {
+  0%,
+  100% {
+    transform: scale(0.98);
+    opacity: 0.42;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.52;
+  }
+}
+
+.animate-warning-breathe {
+  position: relative;
+  isolation: isolate;
+  animation: slime-breathe 2.8s ease-in-out infinite;
+  transform-origin: center center;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    z-index: -1;
+    border-radius: 50%;
+    background: rgb(var(--accent-background-20) / 0.28);
+    filter: blur(4px);
+    animation: warning-breathe-glow 2.8s ease-in-out infinite;
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-warning-breathe {
+    animation: none;
+
+    &::before {
+      animation: none;
+      opacity: 0.45;
+      transform: scale(0.95);
+    }
+  }
+}
+
+/* Waiting-for-tracker pulse: one soft ring, transform and opacity only so it
+   stays on the compositor and costs almost nothing while idle. */
+@keyframes search-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  70%,
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+
+.animate-search-pulse {
+  animation: search-pulse 3.2s cubic-bezier(0.22, 0.8, 0.24, 1) infinite;
+  transform-origin: center center;
+}
+
+/* Stop animating when the window is hidden (set from a visibility listener). */
+.is-page-hidden .animate-search-pulse {
+  animation-play-state: paused;
+}
+
+/* One-shot nudge when the tracker count changes, e.g. a tracker was found. */
+@keyframes found-pop {
+  0% {
+    transform: scale(0.94);
+    opacity: 0.5;
+  }
+  60% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-found-pop {
+  animation: found-pop 450ms cubic-bezier(0.22, 0.8, 0.24, 1) both;
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-search-pulse,
+  .animate-found-pop {
+    animation: none;
+  }
+  .animate-search-pulse {
+    display: none;
+  }
+  .guide-card-contours path,
+  .tracker-card-contours path {
+    filter: none;
+  }
+  .guide-card-contours animate,
+  .tracker-card-contours animate {
+    display: none;
+  }
+}
+
+@keyframes grid-drift-horizontal {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 16px 0;
+  }
+}
+
+.animate-grid-drift {
+  animation: grid-drift-horizontal 12s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-grid-drift {
+    animation: none;
+  }
+}
+
+@keyframes terminal-cursor-blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  95% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-terminal-cursor {
+  animation: terminal-cursor-blink 0.65s step-start infinite;
+}
+
+@keyframes tracker-motion-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(217, 119, 87, 0.24),
+      0 2px 8px -2px rgba(217, 119, 87, 0.12),
+      0 0 12px -2px rgba(217, 119, 87, 0.06);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(217, 119, 87, 0.36),
+      0 2px 10px -2px rgba(217, 119, 87, 0.18),
+      0 0 16px 0 rgba(217, 119, 87, 0.08);
+  }
+}
+
+.animate-tracker-motion {
+  animation: tracker-motion-pulse 3.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-tracker-motion {
+    animation: none;
+    box-shadow:
+      0 0 0 1px rgba(217, 119, 87, 0.36),
+      0 2px 8px -2px rgba(217, 119, 87, 0.16);
+  }
+}
+
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('/fonts/OpenDyslexic-Regular.woff') format('woff');
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('/fonts/OpenDyslexic-Italic.woff') format('woff');
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('/fonts/OpenDyslexic-Bold.woff') format('woff');
+  font-weight: bold;
+}
+
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('/fonts/OpenDyslexic-Bold-Italic.woff') format('woff');
+  font-weight: bold;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Lexend';
+  src: url('/fonts/Lexend[HEXP,wght].woff2') format('woff2-variations');
+  font-weight: 125 950;
+}
+
+@font-face {
+  src: url('/fonts/noto-sans-v42-latin-regular.woff2')
+    format('woff2-variations');
+  font-family: 'Noto Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Ubuntu';
+  src: url('/fonts/Ubuntu-R.woff2') format('woff2');
+}
+
+:root {
+  // overflow: hidden; -- NEVER EVER BRING THIS BACK <3
+  background: theme('colors.background.80');
+  overscroll-behavior: none;
+
+  --navbar-w: 110px;
+
+  @screen mobile {
+    --navbar-h: 73px;
+  }
+}
+
+/* Claude Warm Obsidian & Terracotta Tokens */
+:root {
+  --background-10: 240, 238, 230; /* #F0EEE6 Warm Ivory text */
+  --background-20: 181, 176, 165; /* #B5B0A5 Warm secondary text */
+  --background-30: 138, 133, 124; /* #8A857C Muted tertiary */
+  --background-40: 104, 98, 90; /* Hairline border */
+  --background-50: 60, 56, 50; /* #3C3832 Component borders */
+  --background-60: 35, 34, 32; /* #232220 Raised card */
+  --background-70: 27, 26, 23; /* #1B1A17 Panel */
+  --background-80: 20, 19, 17; /* #141311 Warm canvas */
+  --background-90: 15, 14, 12; /* #0F0E0C Darkest base */
+
+  /* Claude Signature Terracotta Accents */
+  --accent-background-10: 235, 142, 112; /* #EB8E70 Terracotta light */
+  --accent-background-20:
+    184, 87, 56; /* #B85738 Terracotta (white label 4.7:1) */
+  --accent-background-30: 217, 119, 87; /* #D97757 Claude Clay */
+  --accent-background-40: 173, 93, 67; /* #AD5D43 Deep Terracotta */
+  --accent-background-50: 138, 68, 46; /* #8A442E Warm Brick */
+
+  --motion: 232, 137, 90; /* #E8895A moving tracker */
+  --success: 127, 184, 138;
+  --warning: 217, 165, 90;
+  --critical: 217, 105, 95;
+  --special: 217, 119, 87;
+  --window-icon-stroke: 168, 162, 158;
+
+  /* macOS Sequoia 4-Tier Vibrancy System (Warm Espresso & Claude Obsidian) */
+  --material-canvas: rgb(20, 19, 17);
+  --material-primary: rgb(27, 26, 23);
+  --material-secondary: rgb(35, 34, 32);
+  --material-tertiary: rgba(255, 255, 255, 0.05);
+  --material-tertiary-hover: rgba(255, 255, 255, 0.09);
+  --material-tertiary-active: rgba(255, 255, 255, 0.14);
+
+  --material-border-subtle: rgba(250, 249, 245, 0.07);
+  --material-border-primary: rgba(250, 249, 245, 0.1);
+  --material-border-strong: rgba(255, 255, 255, 0.15);
+
+  /* Specular Rim Lighting */
+  --specular-rim: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  --specular-shadow: inset 0 -1px 0 0 rgba(0, 0, 0, 0.22);
+  --glass-elevation: 0 8px 32px -4px rgba(0, 0, 0, 0.32);
+
+  /* WCAG 2.2 AAA Text */
+  --text-primary: #f0eee6;
+  --text-secondary: #b5b0a5;
+  --text-tertiary: #8a857c;
+
+  /* Legacy Liquid Glass compatibility aliases */
+  --glass-bg: var(--material-primary);
+  --glass-bg-strong: var(--material-secondary);
+  --glass-bg-interactive: var(--material-tertiary);
+  --glass-bg-interactive-hover: var(--material-tertiary-hover);
+  --glass-border: var(--material-border-subtle);
+  --glass-border-strong: var(--material-border-primary);
+  --glass-pill-bg: var(--material-tertiary);
+  --glass-blur: 24px;
+  --glass-shadow: var(--glass-elevation);
+
+  --default-color: 245, 245, 247;
+
+  /* Default font size */
+  --font-size: 12rem;
+  --font-size-standard: var(--font-size);
+  /* 16% bigger */
+  --font-size-vr: calc(var(--font-size) * 1.16);
+  /* 100.08% bigger */
+  --font-size-title: calc(var(--font-size) * 2.08);
+
+  --font-name:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display',
+    'SF Pro', 'Helvetica Neue', sans-serif;
+}
+
+:root[data-theme='trans'] {
+  --background-10: 77, 34, 43;
+  --background-20: 6, 58, 78;
+  --background-30: 9, 84, 112;
+  --background-40: 79, 159, 189;
+  --background-50: 238, 238, 238;
+  --background-60: 255, 255, 255;
+  --background-70: 245, 169, 184;
+  --background-80: 91, 206, 250;
+  --background-90: 0, 5, 9;
+
+  --accent-background-10: 181, 58, 82;
+  --accent-background-20: 252, 202, 212;
+  --accent-background-30: 247, 183, 196;
+  --accent-background-40: 247, 183, 196;
+  --accent-background-50: 245, 169, 184;
+
+  --success: 68, 194, 127;
+  --warning: 240, 221, 58;
+  --critical: 223, 109, 140;
+  --special: 164, 79, 237;
+  --window-icon-stroke: 28, 154, 201;
+
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg-strong: rgba(255, 255, 255, 0.88);
+  --glass-bg-interactive: rgba(77, 34, 43, 0.06);
+  --glass-bg-interactive-hover: rgba(77, 34, 43, 0.12);
+  --glass-border: rgba(77, 34, 43, 0.12);
+  --glass-border-strong: rgba(77, 34, 43, 0.22);
+  --glass-pill-bg: rgba(255, 255, 255, 0.5);
+  --glass-blur: 20px;
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+
+  --default-color: 29, 29, 29;
+  --text-primary: #4d222b;
+  --text-secondary: #063a4e;
+  --text-tertiary: #095470;
+}
+
+/* Dark reference theme: navy canvas, blue-gray surfaces, amber actions. */
+:root[data-theme='macos'] {
+  /* #1A3263, #547792, #FAB95B, #E8E2DB plus accessible derived shades. */
+  --background-10: 232, 226, 219; /* #E8E2DB primary text */
+  --background-20: 213, 226, 235; /* #D5E2EB secondary text */
+  --background-30: 185, 204, 218; /* #B9CCDA muted text */
+  --background-40: 107, 139, 164; /* #6B8BA4 quiet structure */
+  --background-50: 84, 119, 146; /* #547792 blue-gray structure */
+  --background-60: 13, 24, 35; /* #0D1823 deeper elevated surface */
+  --background-70: 18, 34, 61; /* #12223D secondary surface */
+  --background-80: 13, 25, 50; /* #0D1932 deep navy canvas */
+  --background-90: 8, 17, 31; /* #08111F deepest surface */
+
+  --accent-background-10: 250, 185, 91; /* #FAB95B accent foreground */
+  --accent-background-20: 250, 185, 91; /* #FAB95B primary action */
+  --accent-background-30: 255, 216, 135; /* #FFD887 light amber tint */
+  --accent-background-40: 232, 163, 62; /* #E8A33E amber structure */
+  --accent-background-50: 250, 185, 91; /* #FAB95B strongest amber text */
+
+  --success: 39, 107, 75;
+  --warning: 232, 163, 62;
+  --critical: 179, 59, 50;
+  --special: 250, 185, 91;
+  --window-icon-stroke: 232, 226, 219;
+
+  --material-canvas: rgba(13, 25, 50, 0.96);
+  --material-primary: rgba(13, 24, 35, 0.92);
+  --material-secondary: rgba(18, 34, 61, 0.98);
+  --material-tertiary: rgba(232, 226, 219, 0.06);
+  --material-tertiary-hover: rgba(232, 226, 219, 0.1);
+  --material-tertiary-active: rgba(232, 226, 219, 0.16);
+  --material-border-subtle: rgba(232, 226, 219, 0.14);
+  --material-border-primary: rgba(232, 226, 219, 0.22);
+  --material-border-strong: rgba(232, 226, 219, 0.34);
+  --specular-rim: inset 0 1px 0 0 rgba(232, 226, 219, 0.18);
+  --specular-shadow: inset 0 -1px 0 0 rgba(0, 0, 0, 0.24);
+  --glass-elevation: 0 12px 28px -12px rgba(0, 0, 0, 0.42);
+  --glass-bg: var(--material-primary);
+  --glass-bg-strong: var(--material-secondary);
+  --glass-bg-interactive: var(--material-tertiary);
+  --glass-bg-interactive-hover: var(--material-tertiary-hover);
+  --glass-border: var(--material-border-subtle);
+  --glass-border-strong: var(--material-border-primary);
+  --glass-pill-bg: rgba(48, 75, 95, 0.72);
+  --glass-blur: 18px;
+  --glass-shadow: var(--glass-elevation);
+  --default-color: 232, 226, 219;
+  --text-primary: #e8e2db;
+  --text-secondary: #d5e2eb;
+  --text-tertiary: #afc3d1;
+}
+
+/* Special theme: Bun, the Mr Bun tiramisu bunny from PawPad (obs-overlay/retro.js, BUN palette).
+   Cream and cocoa on a dark cocoa canvas, coral accents, ochre warnings. Only colour tokens change. */
+:root[data-theme='bun'] {
+  --background-10: 239, 230, 214; /* #efe6d6 cream text */
+  --background-20: 205, 185, 153; /* #cdb999 secondary text */
+  --background-30: 185, 166, 136; /* #b9a688 muted text */
+  --background-40: 90, 62, 50; /* hairline */
+  --background-50: 107, 80, 67; /* #6b5043 component borders */
+  --background-60: 58, 38, 32; /* raised card */
+  --background-70: 51, 33, 27; /* panel */
+  --background-80: 42, 26, 21; /* canvas */
+  --background-90: 31, 19, 15;
+
+  --accent-background-10: 242, 181, 166; /* #f2b5a6 coral, light */
+  --accent-background-20: 201, 101, 79; /* #c9654f coral, low (button fill) */
+  --accent-background-30: 224, 144, 126; /* #e0907e coral */
+  --accent-background-40: 201, 101, 79;
+  --accent-background-50: 240, 144, 122; /* #f0907a coral, text on dark */
+
+  --motion: 224, 144, 126;
+  --success: 127, 191, 138; /* #7fbf8a mint */
+  --warning: 232, 184, 74; /* #e8b84a ochre */
+  --critical: 217, 100, 90; /* #d9645a */
+  --special: 232, 115, 174; /* #e873ae pink */
+  --default-color: 239, 230, 214;
+
+  /* Materials, glass, and sliders: the Quest strip and panels read these. */
+  --material-canvas: rgb(42, 26, 21);
+  --material-primary: rgb(51, 33, 27);
+  --material-secondary: rgb(58, 38, 32);
+  --material-tertiary: rgba(239, 230, 214, 0.05);
+  --material-tertiary-hover: rgba(239, 230, 214, 0.09);
+  --material-tertiary-active: rgba(239, 230, 214, 0.14);
+  --material-border-subtle: rgba(239, 230, 214, 0.08);
+  --material-border-primary: rgba(239, 230, 214, 0.12);
+  --material-border-strong: rgba(239, 230, 214, 0.2);
+  --specular-rim: inset 0 1px 0 0 rgba(239, 230, 214, 0.06);
+  --specular-shadow: inset 0 -1px 0 0 rgba(0, 0, 0, 0.25);
+  --glass-elevation: 0 8px 32px -4px rgba(0, 0, 0, 0.36);
+  --glass-pill-bg: rgba(239, 230, 214, 0.05);
+  --slider-active: rgb(var(--accent-background-30));
+  --slider-track: rgba(239, 230, 214, 0.1);
+  --window-icon-stroke: 185, 166, 136;
+}
+
+/* Fox: PawPad's red fox coat. Umber like the dark ear tips (#2e211c), cream from the chest (#f7e6cc), and orange fur (#d9651e). Shares Bun's layout rules. */
+:root[data-theme='fox'] {
+  --background-10: 247, 230, 204; /* text */
+  --background-20: 214, 192, 163; /* secondary text */
+  --background-30: 178, 156, 130; /* muted text */
+  --background-40: 72, 55, 46; /* hairline */
+  --background-50: 92, 70, 58; /* component borders */
+  --background-60: 48, 37, 31; /* raised card */
+  --background-70: 40, 31, 26; /* panel */
+  --background-80: 31, 24, 20; /* canvas */
+  --background-90: 22, 17, 14;
+
+  --accent-background-10: 242, 153, 90; /* light */
+  --accent-background-20: 178, 78, 22; /* low (button fill) */
+  --accent-background-30: 217, 101, 30; /* coat */
+  --accent-background-40: 178, 78, 22;
+  --accent-background-50: 240, 138, 72; /* text on dark */
+
+  --motion: 217, 101, 30;
+  --success: 127, 191, 138;
+  --warning: 232, 184, 74;
+  --critical: 217, 100, 90;
+  --special: 247, 230, 204;
+  --default-color: 247, 230, 204;
+
+  --material-canvas: rgb(31, 24, 20);
+  --material-primary: rgb(40, 31, 26);
+  --material-secondary: rgb(48, 37, 31);
+  --material-tertiary: rgba(247, 230, 204, 0.05);
+  --material-tertiary-hover: rgba(247, 230, 204, 0.09);
+  --material-tertiary-active: rgba(247, 230, 204, 0.14);
+  --material-border-subtle: rgba(247, 230, 204, 0.08);
+  --material-border-primary: rgba(247, 230, 204, 0.12);
+  --material-border-strong: rgba(247, 230, 204, 0.2);
+  --specular-rim: inset 0 1px 0 0 rgba(247, 230, 204, 0.06);
+  --specular-shadow: inset 0 -1px 0 0 rgba(0, 0, 0, 0.25);
+  --glass-elevation: 0 8px 32px -4px rgba(0, 0, 0, 0.36);
+  --glass-pill-bg: rgba(247, 230, 204, 0.05);
+  --slider-active: rgb(var(--accent-background-30));
+  --slider-track: rgba(247, 230, 204, 0.1);
+  --window-icon-stroke: 178, 156, 130;
+}
+
+/* Dog: PawPad's golden coat. Warm brown like the floppy ears (#b8791f darkened), cream text, golden fur (#d9a24a), and the pink paw (#f2a39a). Shares Bun's layout rules. */
+:root[data-theme='dog'] {
+  --background-10: 245, 233, 211; /* text */
+  --background-20: 214, 196, 163; /* secondary text */
+  --background-30: 180, 162, 128; /* muted text */
+  --background-40: 82, 64, 40; /* hairline */
+  --background-50: 102, 81, 52; /* component borders */
+  --background-60: 55, 43, 28; /* raised card */
+  --background-70: 46, 36, 23; /* panel */
+  --background-80: 36, 28, 18; /* canvas */
+  --background-90: 26, 20, 13;
+
+  --accent-background-10: 240, 201, 120; /* light */
+  --accent-background-20: 150, 100, 26; /* low (button fill) */
+  --accent-background-30: 217, 162, 74; /* coat */
+  --accent-background-40: 150, 100, 26;
+  --accent-background-50: 232, 182, 92; /* text on dark */
+
+  --motion: 217, 162, 74;
+  --success: 127, 191, 138;
+  --warning: 232, 184, 74;
+  --critical: 217, 100, 90;
+  --special: 242, 163, 154;
+  --default-color: 245, 233, 211;
+
+  --material-canvas: rgb(36, 28, 18);
+  --material-primary: rgb(46, 36, 23);
+  --material-secondary: rgb(55, 43, 28);
+  --material-tertiary: rgba(245, 233, 211, 0.05);
+  --material-tertiary-hover: rgba(245, 233, 211, 0.09);
+  --material-tertiary-active: rgba(245, 233, 211, 0.14);
+  --material-border-subtle: rgba(245, 233, 211, 0.08);
+  --material-border-primary: rgba(245, 233, 211, 0.12);
+  --material-border-strong: rgba(245, 233, 211, 0.2);
+  --specular-rim: inset 0 1px 0 0 rgba(245, 233, 211, 0.06);
+  --specular-shadow: inset 0 -1px 0 0 rgba(0, 0, 0, 0.25);
+  --glass-elevation: 0 8px 32px -4px rgba(0, 0, 0, 0.36);
+  --glass-pill-bg: rgba(245, 233, 211, 0.05);
+  --slider-active: rgb(var(--accent-background-30));
+  --slider-track: rgba(245, 233, 211, 0.1);
+  --window-icon-stroke: 180, 162, 128;
+}
+
+/* Pixel look: one cream dot grid behind every page, with the same contrast as the welcome screen. Only the Welcome screen animates (RippleDots). 3px corners and a coral light toggle. Circles keep rounded-full. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) body {
+  background-image: radial-gradient(
+    rgba(var(--background-10), 0.1) 1px,
+    transparent 1.5px
+  );
+  background-size: 12px 12px;
+}
+
+/* The page stays see-through so the body dot grid shows. Panels are solid, so the dots stop at their edges. Backdrop blur would smear the dots, so it goes too. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .text-standard.bg-background-80 {
+  background-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .glass-panel,
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) #home-tracker-view-panel,
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .home-tracker-surface {
+  background-color: rgb(var(--background-70));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Remote: the cards match the Home tracker cards, a raised surface with a hairline border and a soft shadow. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-card {
+  background-color: rgb(var(--background-60));
+  border: 1px solid rgba(var(--background-10), 0.08) !important;
+  box-shadow:
+    inset 0 1px 0 0 rgba(250, 249, 245, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+/* The page header is plain text over a hairline, not a boxed card. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-header {
+  background-color: transparent;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(var(--background-10), 0.06) !important;
+  box-shadow: none;
+  padding: 4px 2px 14px;
+}
+
+/* The decorative wave in each title bar goes. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-card__banner > svg {
+  display: none;
+}
+
+/* Stream cards: a slim header with the icon on the left and the file name on the right,
+   then the settings as one list with hairline separators. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-stream .remote-card__banner {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  height: auto !important;
+  padding: 12px 14px !important;
+  background-color: transparent;
+  border-bottom: 1px solid rgba(var(--background-10), 0.06);
+}
+
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-stream .remote-card__banner > div:nth-child(2) {
+  order: -1;
+  flex-grow: 0;
+}
+
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-stream [class*='rounded-[10px]']:not(button) {
+  background-color: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(var(--background-10), 0.06);
+  border-radius: 0 !important;
+  padding: 10px 0;
+}
+
+/* The empty headset state is plain text, not a dashed box. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-card [class*='border-dashed'] {
+  background-color: transparent;
+  border: 0;
+  border-radius: 0 !important;
+}
+
+/* Bun: the tracker logo sits alone on the ripple, with no flat circle around it. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .tracker-empty-logo {
+  border: 0;
+  background-color: transparent;
+}
+
+/* The waiting logo hops toward the camera and lands on the table every 4.2 s. The ripple starts at the landing
+   (600 ms into the cycle), so the boom comes from the logo as it lands. Bun only, and only while animations are on. */
+@keyframes tracker-logo-hop {
+  0% {
+    transform: translateY(0) scale(1);
+    animation-timing-function: ease-out;
+  }
+  8% {
+    transform: translateY(-30px) scale(1.5);
+    animation-timing-function: ease-in;
+  }
+  14.3% {
+    transform: translateY(0) scale(1);
+  }
+  16.7% {
+    transform: translateY(1px) scale(1.08, 0.92);
+  }
+  19% {
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .tracker-empty-logo.tracker-logo-hop {
+  transform-origin: 50% 100%;
+  animation: tracker-logo-hop 4200ms ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .tracker-empty-logo.tracker-logo-hop {
+    animation: none;
+  }
+}
+
+/* Bun: the onboarding steps draw the static dot grid instead of the technical gridlines. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .animate-grid-drift {
+  display: none;
+}
+
+/* Sidebar: bigger targets, rounded items, and a clear active item. Bun only. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .sidenav__item {
+  height: 44px;
+  border-radius: 12px !important;
+  font-size: 15px;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .sidenav__item[aria-current='page'] {
+  background-color: rgba(var(--accent-background-20), 0.18);
+  color: rgb(var(--accent-background-10));
+  font-weight: 600;
+}
+
+/* Settings: easier to read and to use. Bun only, and nothing is removed.
+   Text is at least 14px, headings are sans-serif, secondary text is brighter,
+   and every card, row and control has more room. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout {
+  font-size: 16px;
+  line-height: 1.55;
+  letter-spacing: 0;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout [class*='text-ui-2xs'] {
+  font-size: 14px;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout [class*='text-ui-xs'] {
+  font-size: 15px;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout [class*='text-ui-sm'] {
+  font-size: 16px;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout [class*='text-ui-md'] {
+  font-size: 18px;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout .text-standard,
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout .text-description {
+  font-size: 16px;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout .text-standard-bold {
+  font-size: 16px;
+  font-weight: 600;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout .font-serif,
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout .text-section-title,
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout .text-main-title {
+  font-family: inherit;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout .text-background-30 {
+  color: rgb(var(--background-20));
+}
+
+/* Settings sidebar: larger links with rounded pills and a filled active item. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout a.group {
+  height: auto;
+  min-height: 38px;
+  padding: 7px 10px !important;
+  border-radius: 12px !important;
+  font-size: 15px;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout a.group[aria-current='page'] {
+  background-color: rgba(var(--accent-background-20), 0.18);
+  color: rgb(var(--accent-background-10));
+  font-weight: 600;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog'])
+  .settings-layout
+  > div:nth-child(2)
+  [class*='uppercase'] {
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  color: rgb(var(--accent-background-30));
+  padding-left: 10px;
+  margin-top: 16px;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog'])
+  .settings-layout
+  > div:nth-child(2)
+  [class*='uppercase']::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 8px;
+  vertical-align: middle;
+  background: rgb(var(--accent-background-20));
+}
+
+/* Settings panels: soft, rounded cards with room around each title and row. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout > div:nth-child(3) {
+  padding: 24px;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout .settings-pane {
+  border-radius: 18px !important;
+  border: 1px solid rgba(var(--background-10), 0.1) !important;
+  background-color: rgb(var(--background-70));
+  box-shadow:
+    inset 0 1px 0 0 rgba(250, 249, 245, 0.05),
+    0 2px 10px rgba(0, 0, 0, 0.2);
+  margin-bottom: 22px;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout .settings-pane > div:first-child {
+  min-height: 72px;
+  padding: 14px 18px;
+  gap: 14px;
+  border-radius: 18px !important;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog'])
+  .settings-layout
+  .settings-pane
+  > div:first-child
+  > div
+  > :first-child {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout .settings-pane__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px !important;
+  background-color: rgba(var(--accent-background-20), 0.16);
+  border: 1px solid rgba(var(--accent-background-20), 0.35);
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout .settings-pane__icon > svg {
+  width: 22px !important;
+  height: 22px !important;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog'])
+  .settings-layout
+  .settings-pane
+  > div:not(:first-child) {
+  padding: 4px 18px 10px;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog'])
+  .settings-layout
+  .settings-pane
+  > div:not(:first-child)
+  [class*='min-h-[48px]'] {
+  min-height: 56px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(var(--background-10), 0.07);
+}
+
+/* The tab chooser has its own dotted canvas (DotRain), so the body dots don't show through it. Bun only. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-sidebar-frame {
+  background-color: rgb(var(--background-70));
+  border-radius: 16px;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-sidebar {
+  background-color: transparent;
+}
+
+/* Settings density: a roomier sidebar, rows and cards. Bun only. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-sidebar .flex-col.gap-0\.5 {
+  gap: 2px;
+}
+/* Only the page you are on gets the fill. The router marks every link on the same route as current, so the rest are reset here. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout a.group[aria-current='page']:not([class*='bg-accent-background-20/10']) {
+  background-color: transparent;
+  color: rgb(var(--background-30));
+  font-weight: 400;
+}
+/* Descriptions stop at about 62 characters per line and breathe a little more. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout .settings-pane p {
+  max-width: 62ch;
+  line-height: 1.6;
+}
+/* Toggle rows in the outlined grids get more height, and the two columns get more space between them. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout .settings-pane label[class*='min-h-[44px]'] {
+  min-height: 60px;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout .settings-pane .gap-x-8 {
+  column-gap: 40px;
+}
+
+/* Disabled settings stay readable: their text uses the muted colour, not the near-invisible one. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog'])
+  .settings-layout
+  [class*='text-background-40']:not(svg) {
+  color: rgb(var(--background-30));
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout label[class*='opacity-50'] {
+  opacity: 0.85;
+}
+
+/* Switches: the off track is easier to see. The round white knobs stay white. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout [class*='bg-background-10/[0.14]'] {
+  background-color: rgba(var(--background-10), 0.3);
+}
+
+/* Light boxes from the older pages are dark here, so their text stays readable. Round knobs stay white. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog'])
+  .settings-layout
+  [class*='bg-white']:not([class*='rounded-full']) {
+  background-color: rgb(var(--background-60));
+}
+
+/* Console and other mono text: at least 14px. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout [class*='font-mono'] {
+  font-size: max(14px, 0.9em);
+}
+
+/* Inputs and dropdowns: taller, rounder, and easier to hit. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout input,
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout select {
+  min-height: 46px;
+  font-size: 16px;
+  border-radius: 12px !important;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout [class*='min-h-[42px]'],
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout [class*='min-h-[40px]'] {
+  min-height: 46px;
+}
+
+/* Keyboard focus: a clear cream ring on every control in the settings and the sidebar. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .settings-layout :focus-visible,
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .sidenav :focus-visible {
+  outline: 2px solid rgb(var(--background-10));
+  outline-offset: 2px;
+}
+
+/* Big titles (SirJameSlimeVR wordmark, page titles) use PawPad's monospace. Body text stays sans for readability. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .font-serif,
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .text-main-title {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.01em;
+}
+
+/* The sidebar name is wider in monospace, so it gets a little less size and tracking to fit the rail. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .truncate.font-serif {
+  font-size: 0.85em;
+  letter-spacing: -0.03em;
+}
+
+/* Secondary buttons: the same stepped pixel corners, in the cocoa border colour. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .app-button-secondary {
+  --e: rgb(var(--background-50));
+  border-radius: 0 !important;
+  box-shadow:
+    0 -2px 0 0 var(--e),
+    0 2px 0 0 var(--e),
+    -2px 0 0 0 var(--e),
+    2px 0 0 0 var(--e);
+}
+
+/* Tertiary buttons and the Toolbar's icon buttons get the same stepped corners. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .app-button-tertiary,
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .toolbar-reset-button {
+  --e: rgb(var(--background-50));
+  border-radius: 0 !important;
+  box-shadow:
+    0 -2px 0 0 var(--e),
+    0 2px 0 0 var(--e),
+    -2px 0 0 0 var(--e),
+    2px 0 0 0 var(--e);
+}
+
+/* The Exit Demo button gets stepped pixel corners in the coral border colour. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .demo-exit-button {
+  --e: rgb(var(--accent-background-20));
+  border-radius: 0 !important;
+  box-shadow:
+    0 -2px 0 0 var(--e),
+    0 2px 0 0 var(--e),
+    -2px 0 0 0 var(--e),
+    2px 0 0 0 var(--e);
+}
+
+/* Pixel icons (PixelIcon, PawEars) share one glow in the theme's accent: a tight halo plus a soft outer one. */
+.pixel-icon {
+  filter: drop-shadow(0 0 2px rgba(var(--accent-background-30), 0.7))
+    drop-shadow(0 0 8px rgba(var(--accent-background-30), 0.35));
+}
+
+/* Primary buttons get stepped pixel corners, the same trick as PawPad's status pill. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .app-button-primary {
+  --e: rgb(var(--accent-background-30));
+  /* Dark label on the lighter coral: about 7.5:1, where cream on the old fill was 3.1:1. */
+  background-color: rgb(var(--accent-background-30));
+  color: rgb(var(--background-90));
+  border-radius: 0 !important;
+  box-shadow:
+    0 -2px 0 0 var(--e),
+    0 2px 0 0 var(--e),
+    -2px 0 0 0 var(--e),
+    2px 0 0 0 var(--e);
+}
+
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) [class*='rounded-']:not([class*='rounded-full']) {
+  border-radius: 3px !important;
+}
+
+/* Broadcast panel sets its radius in SCSS, so the rule above misses it. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .chatbox-panel,
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .chatbox-widget,
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .chatbox-hero-bubble {
+  border-radius: 3px !important;
+}
+
+/* Setup: the ESC key is a pixel keycap, and the skip warning is a card like the settings panes. Bun only. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .skip-setup-button {
+  --e: rgb(var(--background-50));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  min-width: 56px;
+  padding: 0 12px;
+  border-radius: 0 !important;
+  background-color: rgb(var(--background-60));
+  box-shadow:
+    0 -2px 0 0 var(--e),
+    0 2px 0 0 var(--e),
+    -2px 0 0 0 var(--e),
+    2px 0 0 0 var(--e);
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .skip-setup-button:hover {
+  --e: rgb(var(--accent-background-20));
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .skip-setup-button svg {
+  display: none;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .skip-setup-button p {
+  margin: 0;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: rgb(var(--background-10));
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .skip-setup-button:hover p {
+  color: rgb(var(--accent-background-10));
+}
+
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .setup-warning-surface {
+  border: 1px solid rgba(var(--background-10), 0.1) !important;
+  border-radius: 18px !important;
+  background-color: rgb(var(--background-70));
+  box-shadow:
+    inset 0 1px 0 0 rgba(250, 249, 245, 0.05),
+    0 12px 32px rgba(0, 0, 0, 0.45);
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .setup-warning-modal {
+  background-color: transparent;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .setup-warning-modal__banner {
+  height: auto !important;
+  padding: 22px 22px 18px;
+  background-color: transparent;
+  border-bottom: 1px solid rgba(var(--background-10), 0.08);
+}
+/* The icon sits in a coral tile, like the settings icons. The breathing glow is a soft blur, so it goes. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .setup-warning-modal .animate-warning-breathe {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px !important;
+  background-color: rgba(var(--accent-background-20), 0.16);
+  border: 1px solid rgba(var(--accent-background-20), 0.35);
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .setup-warning-modal .animate-warning-breathe::before {
+  display: none;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .setup-warning-modal .animate-warning-breathe > svg {
+  width: 26px;
+  height: 26px;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .setup-warning-modal h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .setup-warning-modal p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgb(var(--background-20));
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .setup-warning-modal button {
+  min-height: 44px;
+  font-size: 15px;
+}
+/* The global 3px corner rule would win on these buttons, so the stepped corners are set again here. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .setup-warning-modal .app-button-primary,
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .setup-warning-modal .app-button-secondary {
+  border-radius: 0 !important;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .setup-warning-modal :focus-visible,
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .skip-setup-button:focus-visible {
+  outline: 2px solid rgb(var(--background-10));
+  outline-offset: 2px;
+}
+
+/* Remote page redesign: on wider windows the headsets sit on the left and the audio tab on the right.
+   The header, the setup banner and the mirror studio span the full width. Bun only. */
+/* It switches on the page's own width (the page is only part of the window), not the viewport's, so zoom and the docked preview cannot squeeze the columns. */
+.remote-page {
+  container-type: inline-size;
+}
+.remote-page * {
+  hyphens: manual;
+  overflow-wrap: break-word;
+}
+@container (min-width: 760px) {
+  :root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-page > div {
+    display: grid !important;
+    grid-template-columns: minmax(18rem, 1fr) minmax(0, 1.6fr);
+    /* Both columns share the row's height, so the headsets panel and the audio card line up. */
+    align-items: stretch;
+  }
+  :root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-page > div > * {
+    grid-column: 1 / -1;
+  }
+  :root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-page > div > .remote-card.group:not(.remote-stream) {
+    grid-column: 1;
+  }
+  :root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-page > div > .remote-audio {
+    grid-column: 2;
+  }
+}
+
+/* Audio tabs are the card's header: the card hangs straight off them, and its own banner (icon and
+   file name) is dropped because the tab already names it. Bun only. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-audio__tabs + [data-audio-tab] .remote-stream {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-audio__tabs + [data-audio-tab] .remote-stream .remote-card__banner {
+  display: none;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-audio [data-audio-tab],
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-audio [data-audio-tab] > .remote-stream {
+  flex-grow: 1;
+}
+/* The live level slider spans the card, not a third of it. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-stream .gap-2\.5 > .remote-level.remote-level {
+  grid-column: 1 / -1;
+}
+
+/* Audio tab: one card at a time, at full width. The other card stays mounted, so its stream keeps running. Bun only. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) [data-audio-tab] {
+  grid-template-columns: minmax(0, 1fr);
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) [data-audio-tab='game'] > :nth-child(2),
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) [data-audio-tab='mic'] > :nth-child(1) {
+  display: none;
+}
+
+/* Audio cards: codec, bitrate and latency buffer sit in one row inside each card. Header and live level take the full width. Bun only. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-stream .gap-2\.5 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.5rem;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-stream .gap-2\.5 > * {
+  grid-column: 1 / -1;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-stream .gap-2\.5 > [class*='rounded-[10px]'] {
+  grid-column: auto;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-stream .gap-2\.5 select {
+  width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+/* Remote page: muted text (subtitles, pills, labels) is brighter, so it reads on the dark cards. Bun only. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-page [class*='text-background-30'] {
+  color: rgb(var(--background-20));
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-page [class*='text-background-40'] {
+  color: rgb(var(--background-30));
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-page button[class*='text-background-30'] {
+  color: rgb(var(--background-10));
+}
+
+/* Remote page, compact: the whole page is scaled to about 84% and its spacing is tighter, so it fits one screen. Bun only. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-page > div {
+  zoom: 0.74;
+  gap: 0.5rem !important;
+  padding: 0.5rem !important;
+}
+
+/* Quest Mirror Studio: the same raised card as the rest of the Remote page, with the same tiles and type sizes. Bun only. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) section.remote-card {
+  background-color: rgb(var(--background-60)) !important;
+  border: 1px solid rgba(var(--background-10), 0.08) !important;
+  box-shadow:
+    inset 0 1px 0 0 rgba(250, 249, 245, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.25);
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .remote-page section.remote-card > div > div:nth-child(2) {
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.375rem;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) section.remote-card [class*='bg-background-10/[0.03]'] {
+  border: 1px solid rgba(var(--background-10), 0.06);
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) section.remote-card [class*='text-ui-xs'] {
+  font-size: 15px;
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) section.remote-card [class*='text-ui-2xs'] {
+  font-size: 13px;
+}
+/* Disabled start buttons read as disabled: a flat cocoa fill with muted text, not a faded coral. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .app-button-primary:disabled {
+  --e: rgb(var(--background-50));
+  background-color: rgba(var(--background-10), 0.08);
+  color: rgb(var(--background-30));
+  box-shadow: none;
+}
+
+:root[data-theme='macos'] body {
+  background-image: none;
+}
+
+:root[data-theme='macos'] .app-button-primary {
+  color: #1a3263;
+}
+
+:root[data-theme='macos'] .app-button-primary:disabled {
+  color: rgba(26, 50, 99, 0.5);
+}
+
+:root[data-theme='macos'] .home-tracker-surface {
+  background: rgb(var(--background-80));
+}
+
+:root[data-theme='macos'] .home-tracker-card {
+  /* lifted: lighter than the canvas, visible edge, top highlight */
+  background: rgb(var(--background-50));
+  border-color: var(--material-border-strong);
+  box-shadow:
+    inset 0 1px 0 rgba(250, 249, 245, 0.08),
+    0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-theme='macos'] .home-tracker-card__banner {
+  /* inset screen for the 2D/3D preview */
+  background: rgb(var(--background-80));
+  border-color: var(--material-border-subtle);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme='macos'] .remote-card {
+  background: rgb(var(--background-60));
+  border-color: var(--material-border-primary);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
+}
+
+:root[data-theme='macos'] .remote-card__banner {
+  background: rgb(var(--background-70));
+  border-color: var(--material-border-subtle);
+}
+
+:root[data-theme='macos'] .settings-pane {
+  background: rgb(var(--background-60));
+  border-color: var(--material-border-primary);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+}
+
+:root[data-theme='macos'] .settings-pane__icon {
+  background: rgba(var(--accent-background-30), 0.18);
+  border-color: rgba(var(--accent-background-20), 0.34);
+}
+
+:root[data-theme='macos'] .settings-sidebar {
+  background: rgba(var(--background-70), 0.78);
+  border-color: var(--material-border-primary);
+}
+
+:root[data-theme='macos'] .toolbar-reset-button {
+  background: rgb(var(--background-60));
+  border-color: var(--material-border-subtle);
+  color: rgb(var(--background-10));
+  fill: rgb(var(--background-10));
+}
+
+:root[data-theme='macos'] .toolbar-reset-button:hover:not(:disabled) {
+  background: rgb(var(--background-70));
+}
+
+:root[data-theme='macos'] .home-command-bar {
+  border-color: var(--material-border-subtle);
+}
+
+:root[data-theme='macos'] .home-command-bar__center {
+  border-color: var(--material-border-subtle);
+}
+
+:root[data-theme='macos'] .home-view-switcher {
+  background: var(--material-tertiary);
+  border-color: var(--material-border-subtle);
+}
+
+:root[data-theme='macos'] .home-view-switcher__button[aria-label='Card View'],
+:root[data-theme='macos'] .home-view-switcher__button[aria-label='Table View'] {
+  min-width: 30px;
+}
+
+:root[data-theme='macos'] .home-skeleton-toggle {
+  background: var(--material-tertiary);
+  border-color: var(--material-border-subtle);
+}
+
+:root[data-theme='macos'] .telemetry-tabs {
+  margin: 8px 8px 0;
+  border: 1px solid var(--material-border-subtle);
+  border-radius: 10px;
+  background: var(--material-tertiary);
+}
+
+:root[data-theme='macos'] .telemetry-tab {
+  color: rgb(var(--background-30));
+}
+
+:root[data-theme='macos'] .telemetry-tab:hover {
+  color: rgb(var(--background-10));
+}
+
+:root[data-theme='macos'] .telemetry-tab[aria-selected='true'] {
+  background: rgb(var(--background-60));
+  color: rgb(var(--background-10));
+  box-shadow: 0 1px 3px rgba(26, 50, 99, 0.12);
+}
+
+:root[data-theme='macos'] .liquid-glass-tab-strip,
+:root[data-theme='macos'] .liquid-glass-tab-panel {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+:root[data-theme='macos'] .liquid-glass-tab-strip {
+  background: rgb(var(--background-70));
+}
+
+:root[data-theme='macos'] .liquid-glass-tab-panel {
+  background: rgb(var(--background-80));
+}
+
+:root[data-theme='macos'] .quest-capture-surface {
+  background: rgb(var(--background-60));
+  border-color: var(--material-border-primary);
+}
+
+:root[data-theme='macos'] .quest-capture-callout {
+  background: rgba(var(--accent-background-30), 0.14);
+  border-color: rgba(var(--accent-background-20), 0.32);
+}
+
+:root[data-theme='macos'] .modal-surface,
+:root[data-theme='macos'] .setup-warning-modal {
+  background: rgb(var(--background-60));
+  border-color: var(--material-border-primary);
+}
+
+:root[data-theme='macos'] .setup-warning-modal__banner {
+  background: rgb(var(--background-70));
+  border-color: var(--material-border-subtle);
+}
+
+:root[data-theme='macos'] .preset-popover {
+  background: rgb(var(--background-60));
+  border-color: var(--material-border-primary);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.42);
+}
+
+:root[data-theme='macos'] .tip-box {
+  background: rgba(var(--accent-background-30), 0.14);
+  border-color: rgba(var(--accent-background-20), 0.32);
+}
+
+:root[data-theme='macos'] .warning-box {
+  background: rgba(var(--warning), 0.12);
+  border-color: rgba(var(--warning), 0.3);
+}
+
+/* The reference theme uses motion for state feedback, not decoration. */
+:root[data-theme='macos'] .remote-card__banner animate {
+  display: none;
+}
+
+:root[data-theme='macos'] .tracker-accent {
+  color: rgb(var(--accent-background-10));
+  fill: rgb(var(--accent-background-10));
+}
+
+:root[data-theme='macos'] .home-accent {
+  color: rgb(var(--accent-background-10));
+  fill: none;
+}
+
+:root[data-theme='macos'] .home-hero-logo {
+  display: block;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+:root[data-theme='macos'] .tracker-accent-stroke {
+  stroke: rgb(var(--background-50));
+}
+
+/* Keep decorative tracker geometry structural blue; reserve amber for actions and status. */
+:root[data-theme='macos'] .tracker-card-contours,
+:root[data-theme='macos'] .guide-card-contours {
+  stroke: rgb(var(--background-50));
+  filter: none;
+}
+
+@keyframes macos-tracker-motion-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(250, 185, 91, 0.2),
+      0 2px 8px -2px rgba(250, 185, 91, 0.1),
+      0 0 12px -2px rgba(250, 185, 91, 0.05);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(250, 185, 91, 0.3),
+      0 2px 10px -2px rgba(250, 185, 91, 0.14),
+      0 0 16px 0 rgba(250, 185, 91, 0.07);
+  }
+}
+
+:root[data-theme='macos'] .animate-tracker-motion {
+  animation-name: macos-tracker-motion-pulse;
+}
+
+/* Decorative SVG motion is intentionally static in the performance-sensitive theme. */
+:root[data-theme='macos'] .guide-card-contours animate {
+  display: none;
+}
+
+:root[data-theme='macos'] .tracker-accent-fill,
+:root[data-theme='macos'] .home-accent-fill {
+  background: rgb(var(--accent-background-30));
+  border-color: rgb(var(--accent-background-20));
+  color: rgb(var(--background-10));
+}
+
+:root[data-theme='slime-green'] {
+  --background-10: 255, 255, 255;
+  --background-20: 107, 206, 107;
+  --background-30: 68, 193, 69;
+  --background-40: 46, 139, 49;
+  --background-50: 27, 82, 28;
+  --background-60: 20, 60, 20;
+  --background-70: 13, 39, 13;
+  --background-80: 7, 20, 7;
+  --background-90: 2, 6, 2;
+
+  --accent-background-10: 104, 205, 105;
+  --accent-background-20: 57, 171, 58;
+  --accent-background-30: 41, 122, 41;
+  --accent-background-40: 36, 108, 36;
+  --accent-background-50: 19, 57, 19;
+
+  --success: 80, 232, 151;
+  --warning: 255, 225, 53;
+  --critical: 223, 109, 140;
+  --special: 54, 161, 54;
+  --window-icon-stroke: 129, 213, 130;
+
+  --glass-bg: rgba(20, 60, 20, 0.72);
+  --glass-bg-strong: rgba(27, 82, 28, 0.85);
+  --glass-bg-interactive: rgba(255, 255, 255, 0.08);
+  --glass-bg-interactive-hover: rgba(255, 255, 255, 0.14);
+  --glass-border: rgba(104, 205, 105, 0.18);
+  --glass-border-strong: rgba(104, 205, 105, 0.3);
+  --glass-pill-bg: rgba(255, 255, 255, 0.08);
+  --glass-blur: 20px;
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+
+  --default-color: 255, 255, 255;
+}
+
+:root[data-theme='slime-yellow'] {
+  --background-10: 255, 255, 255;
+  --background-20: 206, 204, 107;
+  --background-30: 193, 191, 68;
+  --background-40: 139, 137, 46;
+  --background-50: 82, 82, 27;
+  --background-60: 60, 60, 20;
+  --background-70: 39, 39, 13;
+  --background-80: 20, 20, 7;
+  --background-90: 6, 6, 2;
+
+  --accent-background-10: 205, 203, 104;
+  --accent-background-20: 171, 169, 57;
+  --accent-background-30: 122, 121, 41;
+  --accent-background-40: 108, 107, 36;
+  --accent-background-50: 57, 57, 19;
+
+  --success: 80, 232, 151;
+  --warning: 255, 225, 53;
+  --critical: 223, 109, 140;
+  --special: 161, 160, 54;
+  --window-icon-stroke: 213, 212, 129;
+
+  --glass-bg: rgba(60, 60, 20, 0.72);
+  --glass-bg-strong: rgba(82, 82, 27, 0.85);
+  --glass-bg-interactive: rgba(255, 255, 255, 0.08);
+  --glass-bg-interactive-hover: rgba(255, 255, 255, 0.14);
+  --glass-border: rgba(205, 203, 104, 0.18);
+  --glass-border-strong: rgba(205, 203, 104, 0.3);
+  --glass-pill-bg: rgba(255, 255, 255, 0.08);
+  --glass-blur: 20px;
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+
+  --default-color: 255, 255, 255;
+}
+
+:root[data-theme='slime-orange'] {
+  --background-10: 255, 255, 255;
+  --background-20: 206, 145, 107;
+  --background-30: 193, 116, 68;
+  --background-40: 139, 82, 46;
+  --background-50: 82, 49, 27;
+  --background-60: 60, 35, 20;
+  --background-70: 39, 23, 13;
+  --background-80: 20, 12, 7;
+  --background-90: 6, 4, 2;
+
+  --accent-background-10: 205, 143, 104;
+  --accent-background-20: 171, 101, 57;
+  --accent-background-30: 122, 72, 41;
+  --accent-background-40: 108, 64, 36;
+  --accent-background-50: 57, 34, 19;
+
+  --success: 80, 232, 151;
+  --warning: 255, 225, 53;
+  --critical: 223, 109, 140;
+  --special: 161, 95, 54;
+  --window-icon-stroke: 213, 162, 129;
+
+  --glass-bg: rgba(60, 35, 20, 0.72);
+  --glass-bg-strong: rgba(82, 49, 27, 0.85);
+  --glass-bg-interactive: rgba(255, 255, 255, 0.08);
+  --glass-bg-interactive-hover: rgba(255, 255, 255, 0.14);
+  --glass-border: rgba(205, 143, 104, 0.18);
+  --glass-border-strong: rgba(205, 143, 104, 0.3);
+  --glass-pill-bg: rgba(255, 255, 255, 0.08);
+  --glass-blur: 20px;
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+
+  --default-color: 255, 255, 255;
+}
+
+:root[data-theme='slime-red'] {
+  --background-10: 255, 255, 255;
+  --background-20: 206, 107, 107;
+  --background-30: 211, 102, 102;
+  --background-40: 139, 46, 46;
+  --background-50: 82, 27, 27;
+  --background-60: 60, 20, 20;
+  --background-70: 39, 13, 13;
+  --background-80: 20, 7, 7;
+  --background-90: 6, 2, 2;
+
+  --accent-background-10: 205, 104, 104;
+  --accent-background-20: 171, 57, 57;
+  --accent-background-30: 122, 41, 41;
+  --accent-background-40: 108, 36, 36;
+  --accent-background-50: 57, 19, 19;
+
+  --success: 80, 232, 151;
+  --warning: 255, 225, 53;
+  --critical: 223, 109, 140;
+  --special: 161, 54, 54;
+  --window-icon-stroke: 213, 129, 129;
+
+  --glass-bg: rgba(60, 20, 20, 0.72);
+  --glass-bg-strong: rgba(82, 27, 27, 0.85);
+  --glass-bg-interactive: rgba(255, 255, 255, 0.08);
+  --glass-bg-interactive-hover: rgba(255, 255, 255, 0.14);
+  --glass-border: rgba(205, 104, 104, 0.18);
+  --glass-border-strong: rgba(205, 104, 104, 0.3);
+  --glass-pill-bg: rgba(255, 255, 255, 0.08);
+  --glass-blur: 20px;
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+
+  --default-color: 255, 255, 255;
+}
+
+:root[data-theme='dark'] {
+  --background-10: 240, 238, 230; /* #F0EEE6 Warm Ivory text */
+  --background-20: 181, 176, 165; /* #B5B0A5 Warm secondary text */
+  --background-30: 138, 133, 124; /* #8A857C Muted tertiary */
+  --background-40: 104, 98, 90; /* Hairline border */
+  --background-50: 60, 56, 50; /* #3C3832 Component borders */
+  --background-60: 35, 34, 32; /* #232220 Raised card */
+  --background-70: 27, 26, 23; /* #1B1A17 Panel */
+  --background-80: 20, 19, 17; /* #141311 Warm canvas */
+  --background-90: 15, 14, 12; /* #0F0E0C Darkest base */
+
+  --accent-background-10: 235, 142, 112; /* #EB8E70 Terracotta light */
+  --accent-background-20:
+    184, 87, 56; /* #B85738 Terracotta (white label 4.7:1) */
+  --accent-background-30: 217, 119, 87; /* #D97757 Claude Clay */
+  --accent-background-40: 173, 93, 67; /* #AD5D43 Deep Terracotta */
+  --accent-background-50: 138, 68, 46; /* #8A442E Warm Brick */
+
+  --motion: 232, 137, 90; /* #E8895A moving tracker */
+  --success: 127, 184, 138;
+  --warning: 217, 165, 90;
+  --critical: 217, 105, 95;
+  --special: 217, 119, 87;
+  --window-icon-stroke: 168, 162, 158;
+
+  --glass-bg: rgba(34, 35, 40, 0.72);
+  --glass-bg-strong: rgba(48, 49, 56, 0.85);
+  --glass-bg-interactive: rgba(255, 255, 255, 0.08);
+  --glass-bg-interactive-hover: rgba(255, 255, 255, 0.14);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border-strong: rgba(255, 255, 255, 0.18);
+  --glass-pill-bg: rgba(255, 255, 255, 0.08);
+  --glass-blur: 20px;
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+
+  --default-color: 250, 249, 245;
+}
+
+:root[data-theme='dark'] body,
+:root:not([data-theme]) body {
+  background-color: #141311;
+  background-image: none;
+}
+
+:root[data-theme='dark'][data-bg-style='solid'] body,
+:root:not([data-theme])[data-bg-style='solid'] body {
+  background-image: none !important;
+}
+
+:root[data-theme='asexual'] {
+  --background-10: 255, 255, 255;
+  --background-20: 230, 230, 230;
+  --background-30: 200, 200, 200;
+  --background-40: 120, 120, 120;
+  --background-50: 90, 90, 90;
+  --background-60: 60, 60, 60;
+  --background-70: 30, 30, 30;
+  --background-80: 15, 15, 15;
+  --background-90: 0, 0, 0;
+
+  --accent-background-10: 230, 115, 230;
+  --accent-background-20: 210, 70, 210;
+  --accent-background-30: 150, 20, 150;
+  --accent-background-40: 115, 5, 115;
+  --accent-background-50: 75, 0, 75;
+
+  --success: 100, 230, 10;
+  --warning: 220, 200, 50;
+  --critical: 220, 40, 110;
+  --special: 230, 0, 230;
+  --window-icon-stroke: 200, 130, 200;
+
+  --glass-bg: rgba(60, 60, 60, 0.72);
+  --glass-bg-strong: rgba(90, 90, 90, 0.85);
+  --glass-bg-interactive: rgba(255, 255, 255, 0.08);
+  --glass-bg-interactive-hover: rgba(255, 255, 255, 0.14);
+  --glass-border: rgba(230, 115, 230, 0.18);
+  --glass-border-strong: rgba(230, 115, 230, 0.3);
+  --glass-pill-bg: rgba(255, 255, 255, 0.08);
+  --glass-blur: 20px;
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+
+  --default-color: 255, 255, 255;
+}
+
+:root[data-theme='snep'] {
+  --background-10: 255, 255, 255;
+  --background-20: 240, 222, 236;
+  --background-30: 210, 198, 203;
+  --background-40: 155, 140, 147;
+  --background-50: 97, 77, 86;
+  --background-60: 72, 54, 62;
+  --background-70: 55, 40, 47;
+  --background-80: 38, 27, 32;
+  --background-90: 0, 0, 0;
+
+  --accent-background-10: 255, 204, 229;
+  --accent-background-20: 234, 115, 176;
+  --accent-background-30: 184, 70, 127;
+  --accent-background-40: 143, 54, 98;
+  --accent-background-50: 91, 27, 58;
+
+  --success: 139, 223, 35;
+  --warning: 255, 187, 62;
+  --critical: 223, 54, 84;
+  --special: 230, 0, 230;
+  --window-icon-stroke: 234, 134, 185;
+
+  --glass-bg: rgba(72, 54, 62, 0.72);
+  --glass-bg-strong: rgba(97, 77, 86, 0.85);
+  --glass-bg-interactive: rgba(255, 255, 255, 0.08);
+  --glass-bg-interactive-hover: rgba(255, 255, 255, 0.14);
+  --glass-border: rgba(255, 204, 229, 0.18);
+  --glass-border-strong: rgba(255, 204, 229, 0.3);
+  --glass-pill-bg: rgba(255, 255, 255, 0.08);
+  --glass-blur: 20px;
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+
+  --default-color: 255, 255, 255;
+}
+
+#root {
+  height: 100%;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-corner {
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 50px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: theme('colors.background.50');
+  border-radius: 50px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: theme('colors.background.60');
+}
+
+.bg-background-60::-webkit-scrollbar-thumb:hover {
+  background: theme('colors.background.40');
+}
+
+.bg-background-60 {
+  scrollbar-color: theme('colors.background.50') transparent;
+}
+
+.dropdown-scroll {
+  scrollbar-color: theme('colors.background.40') theme('colors.background.50');
+}
+
+.dropdown-scroll::-webkit-scrollbar-thumb {
+  background: theme('colors.background.40');
+}
+
+.dropdown-scroll::-webkit-scrollbar-thumb:hover {
+  background: theme('colors.background.50');
+}
+
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
+.crisp-edges {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+a,
+p,
+h1,
+h2,
+button,
+div {
+  hyphens: auto;
+}
+
+/* Settings grids wrap by the pane's own width, not the viewport's: the pane is
+   only part of the window, so viewport breakpoints squeezed its columns.
+   Never more than --settings-grid-cols columns (the old sm:grid-cols-N); the
+   1.25rem slack covers any gap up to gap-5. */
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(
+      min(
+        100%,
+        max(
+          var(--settings-grid-min, 13rem),
+          calc(100% / var(--settings-grid-cols, 2) - 1.25rem)
+        )
+      ),
+      1fr
+    )
+  );
+}
+/* Whole words only in settings, so a tight label never splits as "En-/able". */
+.settings-layout * {
+  hyphens: manual;
+  overflow-wrap: break-word;
+}
+
+[data-electron-drag-region='true'] {
+  -webkit-app-region: drag;
+}
+
+a,
+.no-user-drag {
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* macOS Sequoia Vibrancy Glass Classes */
+.glass-panel {
+  background: var(--material-primary);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  border: 1px solid var(--material-border-subtle);
+  box-shadow:
+    var(--specular-rim), var(--specular-shadow), var(--glass-elevation);
+}
+
+.glass-panel-strong {
+  background: linear-gradient(
+    165deg,
+    rgba(46, 42, 36, 0.88) 0%,
+    rgba(30, 27, 23, 0.92) 100%
+  );
+  backdrop-filter: blur(calc(var(--glass-blur) * 1.2)) saturate(180%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.2)) saturate(180%);
+  border: 1px solid var(--material-border-subtle);
+  box-shadow:
+    var(--specular-rim),
+    var(--specular-shadow),
+    0 12px 36px -4px rgba(0, 0, 0, 0.38);
+}
+
+@keyframes popoverIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.glass-popover,
+.glass-popup {
+  background: linear-gradient(
+    165deg,
+    rgba(42, 38, 32, 0.97) 0%,
+    rgba(22, 20, 17, 0.98) 100%
+  );
+  backdrop-filter: blur(40px) saturate(190%);
+  -webkit-backdrop-filter: blur(40px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow:
+    var(--specular-rim),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.45),
+    0 24px 52px -6px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(0, 0, 0, 0.4);
+  animation: popoverIn 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top left;
+}
+
+.glass-pill {
+  background: var(--glass-pill-bg);
+  border-radius: 9999px;
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid var(--material-border-subtle);
+  box-shadow: var(--specular-rim);
+}
+
+.glass-interactive {
+  background: var(--material-tertiary);
+  border: 1px solid var(--material-border-subtle);
+  box-shadow: var(--specular-rim);
+  transition: all 140ms cubic-bezier(0.25, 1, 0.5, 1);
+
+  &:hover {
+    background: var(--material-tertiary-hover);
+    border-color: var(--material-border-primary);
+  }
+
+  &:active {
+    background: var(--material-tertiary-active);
+    transform: scale(0.975);
+  }
+}
+
+/* Card Surface for grouped telemetry items */
+.card-surface {
+  background: var(--material-secondary);
+  border: 1px solid var(--material-border-subtle);
+  box-shadow:
+    var(--specular-rim),
+    0 4px 16px -2px rgba(0, 0, 0, 0.25);
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+/* OpenType Tabular Numerals for Telemetry & Spatial HUDs */
+.telemetry-numeral,
+.tnum {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings:
+    'tnum' 1,
+    'cv02' 1,
+    'cv05' 1,
+    'ss01' 1;
+  letter-spacing: -0.01em;
+}
+
+.apple-interactive {
+  background: var(--material-tertiary);
+  border: 1px solid var(--material-border-subtle);
+  box-shadow: none;
+  transition:
+    background-color 140ms cubic-bezier(0.25, 1, 0.5, 1),
+    border-color 140ms cubic-bezier(0.25, 1, 0.5, 1),
+    transform 140ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  &:hover {
+    background: var(--material-tertiary-hover);
+    border-color: var(--material-border-primary);
+  }
+
+  &:active {
+    background: var(--material-tertiary-active);
+    transform: scale(0.98);
+  }
+}
+
+.glass-panel-primary {
+  background: var(--material-primary);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid var(--material-border-subtle);
+  box-shadow:
+    var(--specular-rim), var(--specular-shadow), var(--glass-elevation);
+}
+
+.glass-panel-secondary {
+  background: var(--material-secondary);
+  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  border: 1px solid var(--material-border-primary);
+  box-shadow:
+    var(--specular-rim),
+    var(--specular-shadow),
+    0 12px 36px -4px rgba(0, 0, 0, 0.38);
+}
+
+/* The window is opaque, so blurring translucent panels adds nothing visible
+   except tone shifts and tile seams that move with the zoom level. Dark
+   themes draw their panels as plain opaque surfaces. */
+:root[data-theme='dark'],
+:root:not([data-theme]) {
+  .glass-panel,
+  .glass-panel-strong,
+  .glass-panel-primary,
+  .glass-panel-secondary,
+  .glass-popover,
+  .glass-popup,
+  .glass-pill,
+  .glass-interactive {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* Keep the reference theme layered without paying for full-window blur. */
+:root[data-theme='macos'] {
+  .glass-panel,
+  .glass-panel-strong,
+  .glass-panel-primary,
+  .glass-panel-secondary,
+  .glass-popover,
+  .glass-popup,
+  .glass-pill,
+  .glass-interactive,
+  .liquid-glass-tab-strip,
+  .liquid-glass-tab-panel {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .glass-panel,
+  .glass-panel-strong,
+  .glass-panel-primary,
+  .glass-popover,
+  .glass-popup {
+    background: rgb(var(--background-60));
+  }
+
+  .liquid-glass-tab-panel {
+    background: rgb(var(--background-80));
+  }
+
+  .glass-panel-secondary,
+  .glass-pill,
+  .glass-interactive,
+  .liquid-glass-tab-strip {
+    background: rgb(var(--background-70));
+  }
+}
+
+/* Settings Category Pane Top-to-Bottom Accordion */
+.category-pane-grid {
+  display: grid;
+  transition:
+    grid-template-rows 220ms ease-out,
+    opacity 180ms ease-out;
+}
+
+.category-pane-grid-collapsed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.category-pane-grid-expanded {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+/* Apple HIG Liquid Glass Collapsible Tab Accordion */
+.collapsible-tab-grid {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: clip;
+  opacity: 0;
+  pointer-events: none;
+  contain: paint;
+  transition:
+    grid-template-rows 240ms ease-out,
+    opacity 180ms ease-out;
+}
+
+.collapsible-tab-grid-expanded {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.collapsible-tab-grid-collapsed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.collapsible-tab-content {
+  overflow: hidden;
+  min-height: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    transform 240ms ease-out,
+    opacity 180ms ease-out;
+}
+
+.collapsible-tab-grid-expanded .collapsible-tab-content {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.collapsible-tab-grid-collapsed .collapsible-tab-content {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* Tracker Card & Table Row Apple HIG Slide-in Animations */
+@keyframes view-content-settle {
+  from {
+    opacity: 0.98;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-view-content-settle {
+  animation: view-content-settle 220ms ease-out var(--view-content-delay, 0ms)
+    both;
+}
+
+@keyframes tracker-grid-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-tracker-grid-enter {
+  animation: tracker-grid-card-enter 240ms ease-out both;
+  will-change: transform, opacity;
+}
+
+@keyframes tracker-card-layout-enter {
+  from {
+    transform: translateY(4px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-tracker-layout-enter {
+  animation: tracker-card-layout-enter 180ms ease-out both;
+  will-change: transform;
+}
+
+@keyframes tracker-slide-in-left {
+  0% {
+    transform: translateX(-8px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes tracker-slide-in-right {
+  0% {
+    transform: translateX(8px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-tracker-slide-left {
+  animation: tracker-slide-in-left 220ms ease-out both;
+  will-change: transform, opacity;
+}
+
+.animate-tracker-slide-right {
+  animation: tracker-slide-in-right 220ms ease-out both;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-view-content-settle {
+    animation: none;
+    transform: none;
+  }
+
+  .animate-tracker-grid-enter {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+
+  .animate-tracker-layout-enter {
+    animation: none;
+    transform: none;
+  }
+
+  .animate-tracker-slide-left,
+  .animate-tracker-slide-right {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* The home command bar is a toolbar: stable groups, predictable scan order. */
+.home-command-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+}
+
+.home-command-bar__status {
+  justify-self: start;
+}
+
+.home-command-bar__center {
+  justify-self: center;
+  padding-inline: 10px;
+  border-inline: 1px solid var(--material-border-subtle);
+}
+
+.home-command-bar__views {
+  justify-self: end;
+}
+
+@media (max-width: 1024px) {
+  .home-command-bar {
+    grid-template-columns: auto auto minmax(0, 1fr);
+    column-gap: 6px;
+  }
+
+  .home-command-bar__center {
+    justify-self: center;
+    border-inline: 0;
+    padding-inline: 4px;
+  }
+
+  .home-command-bar__views {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+
+  .home-view-switcher {
+    gap: 0;
+  }
+
+  .home-view-switcher__button {
+    gap: 0.375rem;
+    padding-inline: 0.5rem;
+  }
+
+  .toolbar-reset-group {
+    gap: 4px;
+  }
+}
+
+@media (max-width: 640px) {
+  .home-command-bar {
+    column-gap: 4px;
+  }
+
+  .home-command-bar__status > button {
+    gap: 0.25rem;
+    padding-inline: 0.375rem;
+  }
+
+  .home-tracker-count__label,
+  .home-view-label {
+    display: none;
+  }
+}
+
+/* Liquid Glass Strip Header */
+.liquid-glass-tab-strip {
+  background: var(--material-primary);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--material-border-subtle);
+  box-shadow: var(--specular-rim);
+  transition:
+    background-color 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 300ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  &:hover {
+    background: var(--material-secondary);
+  }
+}
+
+:root[data-theme='dark'] .liquid-glass-tab-strip,
+:root:not([data-theme]) .liquid-glass-tab-strip {
+  background: rgb(26, 24, 21);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+
+  &:hover {
+    background: rgb(34, 31, 27);
+  }
+}
+
+.liquid-glass-tab-panel {
+  background: var(--material-primary);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+}
+
+:root[data-theme='dark'] .liquid-glass-tab-panel,
+:root:not([data-theme]) .liquid-glass-tab-panel {
+  background: rgb(var(--background-80));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Apple HIG Liquid Glass Range Slider */
+/* Slider: 4px filled track inside a 24px hit area (WCAG 2.2 target size).
+   --slider-fill is the percentage set by the Slider component. */
+.apple-slider {
+  --slider-fill: 0%;
+  --slider-track: rgba(var(--background-10), 0.1);
+  --slider-active: rgb(var(--accent-background-20));
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 24px;
+  padding: 10px 0;
+  border-radius: 9999px;
+  background-color: transparent;
+  background-image: linear-gradient(
+    to right,
+    var(--slider-active) var(--slider-fill),
+    var(--slider-track) var(--slider-fill)
+  );
+  background-clip: content-box;
+  outline: none;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid rgb(var(--accent-background-10));
+    outline-offset: 4px;
+  }
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    margin-top: 0;
+    border-radius: 50%;
+    background: #fdfdfd;
+    border: 0;
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.12),
+      0 1px 3px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  &::-webkit-slider-thumb:hover {
+    transform: scale(1.12);
+  }
+
+  &::-webkit-slider-thumb:active {
+    transform: scale(0.96);
+  }
+
+  &::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fdfdfd;
+    border: 0;
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.12),
+      0 1px 3px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+  }
+}
+
+/* Subtle feedback for a selected preset and its neighbors. */
+@keyframes preset-selected-pop {
+  from {
+    transform: scale(calc(1 - 0.015 * var(--pop-scale, 1)));
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes preset-shockwave-push-left {
+  0% {
+    transform: translateX(0);
+  }
+  18% {
+    transform: translateX(calc(var(--push-amp, 1) * -3px));
+  }
+  38% {
+    transform: translateX(calc(var(--push-amp, 1) * -1px));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes preset-shockwave-push-right {
+  0% {
+    transform: translateX(0);
+  }
+  18% {
+    transform: translateX(calc(var(--push-amp, 1) * 3px));
+  }
+  38% {
+    transform: translateX(calc(var(--push-amp, 1) * 1px));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-preset-pop {
+  animation: preset-selected-pop 180ms ease-out both;
+  will-change: transform;
+}
+
+.animate-preset-push-left {
+  animation: preset-shockwave-push-left 180ms ease-out both;
+  will-change: transform;
+}
+
+.animate-preset-push-right {
+  animation: preset-shockwave-push-right 180ms ease-out both;
+  will-change: transform;
+}
+
+/* Apple Standard Fluid Wave Motion for Tracker Cards with Falloff Gradient */
+@keyframes tracker-card-tab-expand {
+  0% {
+    transform: translateY(0) scale(1);
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  32% {
+    transform: translateY(calc(var(--tab-v-amp, 1) * 4px));
+    animation-timing-function: cubic-bezier(0.2, 0.95, 0.3, 1);
+  }
+  68% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  86% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tracker-card-tab-collapse {
+  0% {
+    transform: translateY(0) scale(1);
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  32% {
+    transform: translateY(calc(var(--tab-v-amp, 1) * -4px));
+    animation-timing-function: cubic-bezier(0.2, 0.95, 0.3, 1);
+  }
+  68% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  86% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-card-tab-expand {
+  animation: tracker-card-tab-expand 220ms ease-out both;
+  will-change: transform;
+}
+
+.animate-card-tab-collapse {
+  animation: tracker-card-tab-collapse 220ms ease-out both;
+  will-change: transform;
+}
+
+/* Content appears with a short, subtle fade. */
+@keyframes card-expand-content {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-card-expand-content {
+  animation: card-expand-content 180ms ease-out both;
+  will-change: transform, opacity;
+}
+
+@keyframes tracker-settings-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-tracker-settings-in {
+  animation: tracker-settings-fade-in 220ms ease-out both;
+  will-change: transform, opacity;
+}
+
+.animate-tracker-settings-left {
+  animation: tracker-settings-fade-in 220ms ease-out both;
+  animation-delay: 20ms;
+  will-change: transform, opacity;
+}
+
+.animate-tracker-settings-right {
+  animation: tracker-settings-fade-in 220ms ease-out both;
+  animation-delay: 40ms;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-preset-pop,
+  .animate-preset-push-left,
+  .animate-preset-push-right,
+  .animate-card-tab-expand,
+  .animate-card-tab-collapse,
+  .animate-card-expand-content,
+  .animate-tracker-settings-in,
+  .animate-tracker-settings-left,
+  .animate-tracker-settings-right {
+    animation: none;
+    transform: none;
+  }
+}
+
+/* Reduced transparency fallback */
+@media (prefers-reduced-transparency: reduce) {
+  .glass-panel,
+  .glass-panel-strong,
+  .glass-popover,
+  .glass-popup,
+  .glass-pill,
+  .glass-interactive {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: theme('colors.background.60') !important;
+  }
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ------------------------------------------------------------------------
+   Claude theme (default): ivory canvas, warm ink, Crail terracotta accent.
+   Token scale is inverted vs. the dark themes (10 = ink, 80 = canvas), the
+   same convention the light 'trans' theme uses.
+   ------------------------------------------------------------------------ */
+:root[data-theme='claude'] {
+  --background-10: 20, 20, 19; /* #141413 ink */
+  --background-20: 61, 61, 58; /* #3D3D3A secondary text */
+  --background-30: 94, 93, 89; /* #5E5D59 muted text (6.4:1 on canvas) */
+  --background-40: 131, 130, 125; /* #83827D icons, quiet structure */
+  --background-50: 209, 207, 197; /* #D1CFC5 component borders */
+  --background-60: 255, 255, 255; /* card */
+  --background-70: 240, 238, 230; /* #F0EEE6 panel / banner */
+  --background-80: 250, 249, 245; /* #FAF9F5 ivory canvas */
+  --background-90: 232, 230, 220; /* #E8E6DC deepest */
+
+  --accent-background-10: 169, 78, 46; /* #A94E2E accent text on ivory */
+  --accent-background-20:
+    184, 87, 56; /* #B85738 Crail, primary action (white label 4.7:1) */
+  --accent-background-30: 217, 119, 87; /* #D97757 clay */
+  --accent-background-40: 169, 78, 46; /* #A94E2E pressed / structure */
+  --accent-background-50: 150, 66, 38; /* #964226 strongest accent text */
+
+  --motion: 234, 88, 12; /* #EA580C moving tracker (3.5:1 on ivory) */
+  --success: 47, 125, 79;
+  --warning: 154, 92, 12;
+  --critical: 190, 50, 42;
+  --special: 184, 87, 56;
+  --window-icon-stroke: 94, 93, 89;
+
+  --material-canvas: rgba(250, 249, 245, 0.96);
+  --material-primary: rgba(255, 255, 255, 0.92);
+  --material-secondary: rgba(255, 255, 255, 0.98);
+  --material-tertiary: rgba(20, 20, 19, 0.04);
+  --material-tertiary-hover: rgba(20, 20, 19, 0.07);
+  --material-tertiary-active: rgba(20, 20, 19, 0.11);
+  --material-border-subtle: rgba(31, 30, 29, 0.1);
+  --material-border-primary: rgba(31, 30, 29, 0.15);
+  --material-border-strong: rgba(31, 30, 29, 0.25);
+  --specular-rim: inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+  --specular-shadow: inset 0 -1px 0 0 rgba(31, 30, 29, 0.03);
+  --glass-elevation: 0 4px 24px -4px rgba(31, 30, 29, 0.08);
+
+  --text-primary: #141413;
+  --text-secondary: #3d3d3a;
+  --text-tertiary: #5e5d59;
+
+  --glass-bg: var(--material-primary);
+  --glass-bg-strong: var(--material-secondary);
+  --glass-bg-interactive: var(--material-tertiary);
+  --glass-bg-interactive-hover: var(--material-tertiary-hover);
+  --glass-border: var(--material-border-subtle);
+  --glass-border-strong: var(--material-border-primary);
+  --glass-pill-bg: rgba(20, 20, 19, 0.05);
+  --glass-blur: 0px;
+  --glass-shadow: var(--glass-elevation);
+
+  --default-color: 20, 20, 19;
+}
+
+:root[data-theme='claude'] {
+  color-scheme: light;
+
+  body {
+    background-color: rgb(var(--background-80));
+    background-image: none;
+    color: rgb(var(--background-10));
+  }
+
+  /* Solid, warm surfaces instead of blurred glass. */
+  .glass-panel,
+  .glass-panel-strong,
+  .glass-panel-primary,
+  .glass-popover,
+  .glass-popup,
+  .card-surface {
+    background: rgb(var(--background-60));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-color: var(--material-border-subtle);
+    box-shadow: var(--glass-elevation);
+  }
+
+  .glass-panel-secondary,
+  .glass-pill,
+  .glass-interactive,
+  .liquid-glass-tab-strip {
+    background: rgb(var(--background-70));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-color: var(--material-border-subtle);
+  }
+
+  .glass-popover,
+  .glass-popup {
+    border-color: var(--material-border-primary);
+    box-shadow: 0 12px 40px -8px rgba(31, 30, 29, 0.18);
+  }
+
+  .liquid-glass-tab-panel {
+    background: rgb(var(--background-80));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  .home-tracker-surface {
+    background: rgb(var(--background-80));
+  }
+
+  .home-tracker-card,
+  .remote-card,
+  .settings-pane,
+  .quest-capture-surface,
+  .modal-surface,
+  .setup-warning-modal,
+  .preset-popover {
+    background: rgb(var(--background-60));
+    border-color: var(--material-border-subtle);
+    box-shadow: var(--glass-elevation);
+  }
+
+  .home-tracker-card__banner,
+  .remote-card__banner,
+  .setup-warning-modal__banner {
+    background: rgb(var(--background-70));
+    border-color: var(--material-border-subtle);
+  }
+
+  .settings-sidebar {
+    background: rgb(var(--background-70));
+    border-color: var(--material-border-subtle);
+  }
+
+  .toolbar-reset-button {
+    background: rgb(var(--background-60));
+    border-color: var(--material-border-primary);
+    color: rgb(var(--background-10));
+    fill: rgb(var(--background-10));
+  }
+
+  .toolbar-reset-button:hover:not(:disabled) {
+    background: rgb(var(--background-70));
+  }
+
+  .home-view-switcher,
+  .home-skeleton-toggle,
+  .telemetry-tabs {
+    background: var(--material-tertiary);
+    border-color: var(--material-border-subtle);
+  }
+
+  .telemetry-tab {
+    color: rgb(var(--background-30));
+  }
+
+  .telemetry-tab:hover {
+    color: rgb(var(--background-10));
+  }
+
+  .telemetry-tab[aria-selected='true'] {
+    background: rgb(var(--background-60));
+    color: rgb(var(--background-10));
+    box-shadow: 0 1px 3px rgba(31, 30, 29, 0.12);
+  }
+
+  .tip-box,
+  .quest-capture-callout {
+    background: rgba(var(--accent-background-30), 0.12);
+    border-color: rgba(var(--accent-background-20), 0.3);
+  }
+
+  .warning-box {
+    background: rgba(var(--warning), 0.1);
+    border-color: rgba(var(--warning), 0.3);
+  }
+
+  .app-button-primary {
+    color: #ffffff;
+  }
+
+  /* Accent text must clear 4.5:1 on ivory; raw #D97757 does not. */
+  [class*='text-[#D97757]'],
+  [class*='text-[#EB8E70]'] {
+    color: rgb(var(--accent-background-10)) !important;
+  }
+
+  [class*='bg-[#F4F1E8]'] {
+    background-color: rgb(var(--background-70)) !important;
+  }
+
+  .tracker-accent,
+  .home-accent {
+    color: rgb(var(--accent-background-10));
+  }
+
+  .tracker-card-contours,
+  .guide-card-contours {
+    stroke: rgb(var(--background-50));
+    filter: none;
+  }
+
+  ::selection {
+    background: rgba(var(--accent-background-30), 0.28);
+  }
+}
+
+/* ------------------------------------------------------------------------
+   Performance: no decorative motion anywhere. Keyframe animations, CSS
+   transitions and compositor hints are disabled app-wide. Only loading
+   spinners keep rotating so progress stays visible.
+   ------------------------------------------------------------------------ */
+/* Allowed exceptions: spinners, and the two cheap compositor-only animations
+   of the waiting-for-tracker state (.animate-search-pulse, .animate-found-pop). */
+*:not(.animate-spin):not(.animate-spin-ccw):not(.animate-search-pulse):not(
+    .animate-found-pop
+  ),
+*:not(.animate-spin):not(.animate-spin-ccw):not(.animate-search-pulse):not(
+    .animate-found-pop
+  )::before,
+*:not(.animate-spin):not(.animate-spin-ccw):not(.animate-search-pulse):not(
+    .animate-found-pop
+  )::after {
+  animation: none !important;
+  transition: none !important;
+  will-change: auto !important;
+  scroll-behavior: auto !important;
+}
+
+/* Backdrop blur re-samples what is behind an element every frame it changes
+   and is the most expensive effect for the macOS compositor. */
+*,
+*::before,
+*::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* ------------------------------------------------------------------------
+   Accessibility baseline
+   ------------------------------------------------------------------------ */
+
+/* One visible keyboard focus ring for everything focusable. Pointer clicks do
+   not trigger :focus-visible, so mouse users never see it. */
+:focus-visible {
+  outline: 2px solid rgb(var(--accent-background-10));
+  outline-offset: 2px;
+}
+
+/* Skip link: first focusable element, only visible when focused. */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 1000;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: rgb(var(--background-60));
+  color: rgb(var(--background-10));
+  border: 1px solid var(--material-border-strong);
+  transform: translateY(-200%);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* Honour "Increase contrast": stronger borders, solid text. */
+@media (prefers-contrast: more) {
+  :root {
+    --material-border-subtle: rgb(var(--background-40));
+    --material-border-primary: rgb(var(--background-40));
+    --material-border-strong: rgb(var(--background-10));
+    --text-secondary: rgb(var(--background-10));
+    --text-tertiary: rgb(var(--background-20));
+  }
+}
+
+/* Windows/Chromium forced-colors (high contrast) mode: let the system palette
+   win and keep controls outlined. */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline-color: Highlight;
+  }
+
+  button,
+  [role='button'],
+  [role='tab'],
+  [role='switch'],
+  input,
+  select {
+    border: 1px solid ButtonText;
+  }
+}
+
+/* A moving tracker uses the vivid motion orange in every theme. The theme
+   rules above set .tracker-accent with higher specificity, so repeat it here. */
+:root[data-theme] .tracker-accent.tracker-moving {
+  color: rgb(var(--motion));
+  fill: rgb(var(--motion));
+}
+
+/* Demo trackers at rest: brighter than the theme accent, softer than the
+   vivid motion orange of a moving tracker. */
+:root[data-theme] .tracker-accent.tracker-demo-idle {
+  color: color-mix(
+    in srgb,
+    rgb(var(--motion)) 60%,
+    rgb(var(--accent-background-20))
+  );
+  fill: color-mix(
+    in srgb,
+    rgb(var(--motion)) 60%,
+    rgb(var(--accent-background-20))
+  );
+}
+
+:root[data-theme] .home-tracker-card.tracker-card-moving {
+  border-color: rgba(var(--motion), 0.55);
+  box-shadow:
+    inset 0 1px 0 0 rgba(250, 249, 245, 0.05),
+    0 0 16px -4px rgba(var(--motion), 0.3);
+}
+
+/* Bun, Fox and Dog: a stronger glow, on the moving cards and on the pixel icons and ears. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .home-tracker-card.tracker-card-moving {
+  border-color: rgba(var(--motion), 0.75);
+  box-shadow:
+    inset 0 1px 0 0 rgba(250, 249, 245, 0.05),
+    0 0 24px -2px rgba(var(--motion), 0.55);
+}
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .pixel-icon {
+  filter: drop-shadow(0 0 2px rgba(var(--accent-background-30), 0.95))
+    drop-shadow(0 0 12px rgba(var(--accent-background-30), 0.6));
+}
+
+/* Tracker cards: the pixel glow is for motion only, so a resting card stays quiet. */
+:root:is([data-theme='bun'], [data-theme='fox'], [data-theme='dog']) .home-tracker-card:not(.tracker-card-moving) .pixel-icon {
+  filter: none;
+}
+/* A moving tracker's icon gives a short wiggle instead of a MOVING chip. */
+@keyframes tracker-wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-7deg);
+  }
+  75% {
+    transform: rotate(7deg);
+  }
+}
+.tracker-wiggle {
+  animation: tracker-wiggle 0.6s ease-in-out 2;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tracker-wiggle {
+    animation: none;
+  }
+}
+
+/* Raised surfaces: a faint top highlight and soft shadow give depth without
+   heavier borders. */
+.home-tracker-card {
+  box-shadow:
+    inset 0 1px 0 0 color-mix(in srgb, rgb(var(--background-10)) 10%, transparent),
+    0 10px 24px rgba(0, 0, 0, 0.4);
+}
+
+.home-tracker-card__banner {
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+/* Tracker cards size by their own width, so the Home grid can keep two rows at any zoom: the smaller the
+   card, the less chrome it carries. */
+.home-tracker-card {
+  container-type: inline-size;
+}
+@container (max-width: 190px) {
+  .home-tracker-card .card-mode {
+    display: none;
+  }
+  .home-tracker-card .card-problems {
+    inset-inline: 0.25rem;
+    justify-content: center;
+  }
+}
+@container (max-width: 130px) {
+  .home-tracker-card .card-problems {
+    display: none;
+  }
+}

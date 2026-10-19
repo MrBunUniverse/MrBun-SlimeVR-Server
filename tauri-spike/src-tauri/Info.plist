@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>SlimeVR reads the song playing in Apple Music to show it in the VRChat chatbox.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SlimeVR listens to your voice for the VRChat chatbox dictation.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>SlimeVR transcribes your voice on-device for the VRChat chatbox.</string>
+</dict>
+</plist>

@@ -1,0 +1,7 @@
+.onboarding-layout {
+  display: grid;
+  grid-template:
+    't' auto
+    'c' minmax(0, 1fr)
+    / 100%;
+}

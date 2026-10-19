@@ -1,0 +1,80 @@
+// One surface with hairline rows, in the theme's colours. Quiet at rest:
+// a moving tracker gets a thin motion bar on the left, not a glow.
+.tracker-list {
+  .tracker-list-body {
+    overflow: hidden;
+    border-radius: 12px;
+    background: rgb(var(--background-60));
+    box-shadow: inset 0 0 0 1px rgba(var(--background-10), 0.06);
+  }
+
+  .tracker-list-row {
+    min-height: 52px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(var(--background-10), 0.06);
+    box-shadow: inset 3px 0 0 0 transparent;
+    transition:
+      background-color 150ms ease,
+      box-shadow 300ms ease;
+
+    &:hover {
+      background: rgba(var(--background-10), 0.04);
+    }
+
+    &:focus-visible {
+      outline: 2px solid rgb(var(--accent-background-30));
+      outline-offset: -2px;
+    }
+
+    &.tracker-list-row-moving {
+      box-shadow: inset 3px 0 0 0 rgb(var(--motion));
+
+      .tracker-list-icon {
+        color: rgb(var(--motion));
+        fill: rgb(var(--motion));
+      }
+    }
+  }
+
+  .tracker-list-body > div:last-child .tracker-list-row {
+    border-bottom: 0;
+  }
+
+  .tracker-list-icon {
+    width: 32px;
+    height: 32px;
+    color: rgb(var(--background-20));
+    fill: rgb(var(--background-20));
+  }
+
+  .tracker-list-name .glass-pill {
+    align-self: flex-start;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .tracker-list-cell {
+    font-variant-numeric: tabular-nums;
+  }
+
+  // Column names: small uppercase monospace, muted.
+  .tracker-list-header > div,
+  .tracker-list-header > div * {
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgb(var(--background-30));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tracker-list-row {
+      transition: none;
+    }
+  }
+}

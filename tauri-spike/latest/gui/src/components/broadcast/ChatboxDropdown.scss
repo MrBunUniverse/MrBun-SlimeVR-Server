@@ -1,0 +1,244 @@
+.chatbox-control {
+  position: relative;
+  z-index: 40;
+}
+
+.chatbox-control--side {
+  z-index: 70;
+
+  /* Opens beside the sidebar, anchored to the bottom of the window. */
+  .chatbox-panel {
+    position: fixed;
+    top: auto;
+    bottom: 12px;
+    left: calc(var(--sidenav-w, 224px) + 12px);
+    transform: none;
+  }
+}
+
+.chatbox-control--top {
+  z-index: 70;
+
+  /* Drops down under the pill, left-aligned like the connection details. */
+  .chatbox-panel {
+    top: calc(100% + 8px);
+    left: 0;
+    transform: none;
+  }
+}
+
+/* Narrow windows: the 440px panel no longer fits beside the pill, so it pins to the window's right edge. */
+@media (max-width: 960px) {
+  .chatbox-control--top .chatbox-panel {
+    position: fixed;
+    top: 58px;
+    left: auto;
+    right: 10px;
+    width: min(440px, calc(100vw - 20px));
+  }
+}
+
+.chatbox-control--top .chatbox-panel--open {
+  animation-name: chatbox-panel-open-top;
+}
+
+.chatbox-control--top .chatbox-panel--closing {
+  animation-name: chatbox-panel-close-top;
+}
+
+@keyframes chatbox-panel-open-top {
+  from {
+    opacity: 0.01;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes chatbox-panel-close-top {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.chatbox-control--open button {
+  position: relative;
+  z-index: 1;
+}
+
+.chatbox-panel {
+  --broadcast-accent: rgb(var(--accent-background-20));
+  --broadcast-surface: rgba(var(--background-10), 0.04);
+
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  width: 440px;
+  max-width: calc(100vw - 24px);
+  /* Never taller than the window: header and composer stay pinned and only
+     the middle (.chatbox-body) scrolls. */
+  max-height: calc(100dvh - 72px);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+  border: 1px solid var(--material-border-primary);
+  border-radius: 12px;
+  background: rgb(var(--background-60));
+  color: var(--text-primary);
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.5);
+  font-size: 13px;
+  line-height: 1.35;
+
+  .chatbox-header {
+    flex-shrink: 0;
+    min-height: 32px;
+  }
+
+  .chatbox-title {
+    font-family:
+      'Newsreader', 'Tiempos Headline', 'Charter', 'Iowan Old Style',
+      'Palatino', 'Georgia', serif;
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: -0.2px;
+  }
+
+  .chatbox-body {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--background-40)) transparent;
+    // Keep focus rings from being clipped by the scroll container.
+    margin: -3px;
+    padding: 3px;
+  }
+
+  .chatbox-composer {
+    flex-shrink: 0;
+  }
+
+  // One level of flat tint; no outlines.
+  .chatbox-hero-bubble,
+  .chatbox-widget {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--broadcast-surface);
+  }
+
+  button:focus-visible {
+    outline: 2px solid rgb(var(--accent-background-10));
+    outline-offset: 2px;
+  }
+
+  // Text fields get a single accent border plus a soft halo, not an outline
+  // stacked on top of the border.
+  input:focus-visible,
+  select:focus-visible {
+    outline: none;
+    border-color: rgb(var(--accent-background-20));
+    box-shadow: 0 0 0 3px rgb(var(--accent-background-20) / 0.25);
+  }
+
+  @media (max-width: 600px) {
+    position: fixed;
+    top: 58px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    transform: none;
+  }
+}
+
+.chatbox-panel--open {
+  animation: chatbox-panel-open 180ms ease-out both;
+}
+
+.chatbox-panel--closing {
+  pointer-events: none;
+  animation: chatbox-panel-close 160ms ease-in both;
+}
+
+@keyframes chatbox-panel-open {
+  from {
+    opacity: 0.01;
+    transform: translateX(-50%) translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes chatbox-panel-close {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+}
+
+@keyframes chatbox-content {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 600px) {
+  @keyframes chatbox-panel-open {
+    from {
+      opacity: 0.01;
+      transform: translateY(-4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes chatbox-panel-close {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    to {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chatbox-control *,
+  .chatbox-panel,
+  .chatbox-panel * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
