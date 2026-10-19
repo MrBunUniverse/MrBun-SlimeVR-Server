@@ -1,4 +1,4 @@
-# SJ SlimeVR Server
+# MrBun SlimeVR Server
 
 A personal fork of the [SlimeVR server](https://github.com/SlimeVR/SlimeVR-Server) for full-body tracking. It has a redesigned desktop app, some tracker reliability changes, and tools for using a Meta Quest with VRChat.
 
